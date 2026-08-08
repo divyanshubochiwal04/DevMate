@@ -1,0 +1,19 @@
+# Dependency directories
+node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build/compiled directories
+dist/
+build/
+
+# IDE files
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

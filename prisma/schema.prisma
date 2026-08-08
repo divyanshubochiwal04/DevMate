@@ -1,0 +1,2166 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserStatus {
+  PENDING_ONBOARDING
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum PriorityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TodoStatus {
+  TODO
+  PENDING
+  IN_PROGRESS
+  WAITING
+  BLOCKED
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+  OVERDUE
+}
+
+enum ReminderStatus {
+  PENDING
+  SCHEDULED
+  RUNNING
+  COMPLETED
+  MISSED
+  FAILED
+  CANCELLED
+  SNOOZED
+  FIRED
+  PAUSED
+}
+
+enum ReminderType {
+  TODO
+  NOTE
+  EVENT
+  BIRTHDAY
+  FINANCE
+  EMI
+  LOAN
+  CUSTOM
+}
+
+enum ReminderFrequency {
+  ONETIME
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+  RRULE
+}
+
+enum RetryStrategy {
+  FIXED
+  LINEAR
+  EXPONENTIAL
+}
+
+enum GoalStatus {
+  DRAFT
+  ACTIVE
+  ACHIEVED
+  ABANDONED
+}
+
+enum LoanStatus {
+  ACTIVE
+  SETTLED
+  DEFAULTED
+}
+
+enum EMIStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum SplitType {
+  EQUAL
+  EXACT
+  PERCENTAGE
+  SHARES
+  CUSTOM
+}
+
+enum FileStatus {
+  SCANNING
+  READY
+  INFECTED
+  DELETED
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  ARCHIVED
+}
+
+enum AuditAction {
+  INSERT
+  UPDATE
+  DELETE
+  SECURITY_FLAG
+  IMPORT
+  EXPORT
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+}
+
+enum PluginStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum NotificationType {
+  SYSTEM
+  TASK
+  FINANCIAL
+  REMINDER
+  SECURITY
+}
+
+enum ReminderAction {
+  FIRED
+  SNOOZED
+  PAUSED
+  DISMISSED
+}
+
+enum WebhookStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum SettlementStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  PROPOSED
+  REJECTED
+}
+
+enum GroupStatus {
+  ACTIVE
+  ARCHIVED
+  DISBANDED
+}
+
+enum MemberStatus {
+  ACTIVE
+  LEFT
+  REMOVED
+  JOINED
+  BLOCKED
+}
+
+enum ExpenseStatus {
+  ACTIVE
+  VOIDED
+}
+
+enum DocumentJobType {
+  OCR
+  PDF_MERGE
+  PDF_SPLIT
+  PDF_COMPRESS
+  PDF_PROTECT
+  PDF_UNLOCK
+  PDF_ROTATE
+  PDF_WATERMARK
+}
+
+enum Currency {
+  USD
+  EUR
+  GBP
+  INR
+  JPY
+  CAD
+  AUD
+  CHF
+  CNY
+}
+
+enum Language {
+  EN
+  ES
+  FR
+  DE
+  IT
+  RU
+  ZH
+  JA
+}
+
+enum NotificationChannel {
+  TELEGRAM
+  EMAIL
+  PUSH
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+enum BackgroundJobPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum BudgetPeriod {
+  WEEKLY
+  MONTHLY
+  YEARLY
+  CUSTOM
+}
+
+enum PremiumPlan {
+  FREE
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
+
+enum AttendeeStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  TENTATIVE
+}
+
+enum StorageProvider {
+  LOCAL
+  S3
+  GOOGLE_DRIVE
+  TELEGRAM
+}
+
+enum SearchEntityType {
+  TODO
+  REMINDER
+  GOAL
+  EXPENSE
+  LOAN
+  SUBSCRIPTION
+  SPLITTER_GROUP
+  NOTE
+  VAULT_FILE
+}
+
+enum JobType {
+  OCR
+  PDF_MERGE
+  PDF_SPLIT
+  PDF_COMPRESS
+  PDF_PROTECT
+  PDF_UNLOCK
+  PDF_ROTATE
+  PDF_WATERMARK
+  BACKUP
+  NOTIFICATION_DELAY
+  DATA_EXPORT
+  DATA_IMPORT
+  CLEANUP
+}
+
+model User {
+  id                  String                @id @default(uuid()) @db.VarChar(36)
+  telegramId          BigInt                @unique @map("telegram_id")
+  username            String?               @db.VarChar(100)
+  firstName           String                @map("first_name") @db.VarChar(150)
+  lastName            String?               @map("last_name") @db.VarChar(150)
+  status              UserStatus            @default(ACTIVE)
+  email               String?               @unique @db.VarChar(150)
+  phone               String?               @unique @db.VarChar(50)
+  profilePhoto        String?               @map("profile_photo") @db.VarChar(500)
+  bio                 String?               @db.Text
+  country             String?               @db.VarChar(2)
+  lastActive          DateTime?             @map("last_active")
+  lastUsernameChange  DateTime?             @map("last_username_change")
+  avatarFileId        String?               @map("avatar_file_id") @db.VarChar(36)
+  avatarFile          VaultFile?            @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
+  lastLogin           DateTime?             @map("last_login")
+  premiumPlan         PremiumPlan?          @map("premium_plan")
+  premiumExpiresAt    DateTime?             @map("premium_expires_at")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+  deletedAt           DateTime?             @map("deleted_at")
+  createdBy           String?               @map("created_by") @db.VarChar(36)
+  updatedBy           String?               @map("updated_by") @db.VarChar(36)
+  deletedBy           String?               @map("deleted_by") @db.VarChar(36)
+  version             Int                   @default(1)
+  preferences         UserPreference?
+  settings            Setting?
+  todosCreated        Todo[]                @relation("TodoCreator")
+  todosCompleted      Todo[]                @relation("TodoCompletedBy")
+  todosArchived       Todo[]                @relation("TodoArchivedBy")
+  projects            Project[]
+  todoLists           TodoList[]
+  labels              Label[]
+  todoComments        TodoComment[]
+  todoHistory         TodoHistory[]
+  reminders           Reminder[]
+  goals               Goal[]
+  expenses            Expense[]
+  loans               Loan[]
+  subscriptions       Subscription[]
+  splitterGroupsOwned SplitGroup[]       @relation("GroupOwner")
+  splitterMembers     SplitMember[]
+  vaultFolders        VaultFolder[]
+  vaultFiles          VaultFile[]
+  vaultUserKey        VaultUserKey?
+  vaultItems          VaultItem[]
+  notifications       Notification[]
+  birthdays           Birthday[]
+  searchIndexMetadata SearchIndexMetadata[]
+  userRoles           UserRole[]
+  sessions            Session[]
+  notes               Note[]
+  noteFolders         NoteFolder[]
+  noteTags            NoteTag[]
+  noteVersionEdits    NoteVersion[]         @relation("NoteVersionEditor")
+  calendars           Calendar[]
+  calendarEvents      CalendarEvent[]
+  budgets             Budget[]
+  ocrJobs             OCRJob[]
+  pdfJobs             PDFJob[]
+  dashboardSnapshots  DashboardSnapshot[]
+  expenseCategories   ExpenseCategory[]
+  financeAccounts     Account[]
+  financeTransactions Transaction[]
+  recurringTransactions RecurringTransaction[]
+  financialGoals      FinancialGoal[]
+  ledgerEntries       LedgerEntry[]
+
+  @@map("users")
+}
+
+model UserPreference {
+  id                      String          @id @default(uuid()) @db.VarChar(36)
+  userId                  String          @unique @map("user_id") @db.VarChar(36)
+  user                    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baseCurrency            Currency        @default(USD) @map("base_currency")
+  timezone                String          @default("UTC") @db.VarChar(100)
+  language                Language        @default(EN)
+  theme                   Theme           @default(DARK)
+  dateFormat              DateFormat      @default(YYYY_MM_DD) @map("date_format")
+  timeFormat              TimeFormat      @default(H24) @map("time_format")
+  numberFormat            String          @default("COMMAS") @map("number_format") @db.VarChar(50)
+  measurementUnits        MeasurementUnit @default(METRIC) @map("measurement_units")
+  weekStartDay            WeekDay         @default(MONDAY) @map("week_start_day")
+  notificationPreferences Json?           @map("notification_preferences")
+  createdAt               DateTime        @default(now()) @map("created_at")
+  updatedAt               DateTime        @updatedAt @map("updated_at")
+  deletedAt               DateTime?       @map("deleted_at")
+  createdBy               String?         @map("created_by") @db.VarChar(36)
+  updatedBy               String?         @map("updated_by") @db.VarChar(36)
+  deletedBy               String?         @map("deleted_by") @db.VarChar(36)
+  version                 Int             @default(1)
+
+  @@map("user_preferences")
+}
+
+model Setting {
+  id                  String    @id @default(uuid()) @db.VarChar(36)
+  userId              String    @unique @map("user_id") @db.VarChar(36)
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quietHoursStart     String?   @map("quiet_hours_start") @db.VarChar(5)
+  quietHoursEnd       String?   @map("quiet_hours_end") @db.VarChar(5)
+  summaryTime         String    @default("08:00") @map("summary_time") @db.VarChar(5)
+  notifyEnabled       Boolean   @default(true) @map("notify_enabled")
+  privacySettings     Json?     @map("privacy_settings")
+  securitySettings    Json?     @map("security_settings")
+  telegramPreferences Json?     @map("telegram_preferences")
+  aiPreferences       Json?     @map("ai_preferences")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  deletedAt           DateTime? @map("deleted_at")
+  createdBy           String?   @map("created_by") @db.VarChar(36)
+  updatedBy           String?   @map("updated_by") @db.VarChar(36)
+  deletedBy           String?   @map("deleted_by") @db.VarChar(36)
+  version             Int       @default(1)
+
+  @@map("settings")
+}
+
+model Todo {
+  id                  String           @id @default(uuid()) @db.VarChar(36)
+  userId              String           @map("user_id") @db.VarChar(36)
+  user                User             @relation("TodoCreator", fields: [userId], references: [id], onDelete: Cascade)
+  title               String           @db.VarChar(255)
+  description         String?          @db.Text
+  priority            PriorityLevel    @default(MEDIUM)
+  status              TodoStatus       @default(TODO)
+  
+  // Relations to Project and List
+  projectId           String?          @map("project_id") @db.VarChar(36)
+  project             Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  listId              String?          @map("list_id") @db.VarChar(36)
+  list                TodoList?        @relation(fields: [listId], references: [id], onDelete: SetNull)
+
+  // Scheduling (Durations in minutes)
+  startDate           DateTime?        @map("start_date")
+  dueDate             DateTime?        @map("due_date")
+  completedAt         DateTime?        @map("completed_at")
+  estimatedDuration   Int?             @map("estimated_duration") // In minutes
+  actualDuration      Int?             @map("actual_duration")    // In minutes
+  recurrenceRule      String?          @map("recurrence_rule")    // RRULE RFC 5545 format
+  
+  // Self relation for parent/subtasks
+  parentTodoId        String?          @map("parent_todo_id") @db.VarChar(36)
+  parent              Todo?            @relation("TodoSubtasks", fields: [parentTodoId], references: [id], onDelete: Cascade)
+  subtasks            Todo[]           @relation("TodoSubtasks")
+
+  // Audit and Versioning
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  deletedAt           DateTime?        @map("deleted_at")
+  createdBy           String?          @map("created_by") @db.VarChar(36)
+  updatedBy           String?          @map("updated_by") @db.VarChar(36)
+  deletedBy           String?          @map("deleted_by") @db.VarChar(36)
+  
+  // Relations for Completed and Archived
+  completedById       String?          @map("completed_by_id") @db.VarChar(36)
+  completedBy         User?            @relation("TodoCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+  archivedById        String?          @map("archived_by_id") @db.VarChar(36)
+  archivedBy          User?            @relation("TodoArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+  archivedAt          DateTime?        @map("archived_at")
+  version             Int              @default(1)
+
+  // Sub-entities
+  attachments         TodoAttachment[]
+  comments            TodoComment[]
+  checklists          Checklist[]
+  labels              TodoLabel[]
+  history             TodoHistory[]
+  reminders           Reminder[]
+  
+  // Task Dependencies
+  dependencies        TodoDependency[] @relation("TodoDependent")
+  dependents          TodoDependency[] @relation("TodoDependency")
+
+  @@index([userId, status], map: "idx_todos_user_status")
+  @@index([userId, dueDate], map: "idx_todos_user_due")
+  @@map("todos")
+}
+
+model Reminder {
+  id               String            @id @default(uuid()) @db.VarChar(36)
+  userId           String            @map("user_id") @db.VarChar(36)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  associatedTodoId String?           @map("associated_todo_id") @db.VarChar(36)
+  todo             Todo?             @relation(fields: [associatedTodoId], references: [id], onDelete: Cascade)
+  text             String            @db.VarChar(500)
+  type             ReminderType      @default(CUSTOM)
+  targetId         String?           @map("target_id") @db.VarChar(36)
+  targetType       ReminderType?     @map("target_type")
+  triggerTime      DateTime          @map("trigger_time")
+  snoozeMinutes    Int               @default(0) @map("snooze_minutes")
+  snoozedUntil     DateTime?         @map("snoozed_until")
+  status           ReminderStatus    @default(PENDING)
+  nextExecutionAt  DateTime?         @map("next_execution_at")
+  lastExecutedAt   DateTime?         @map("last_executed_at")
+  retryCount       Int               @default(0) @map("retry_count")
+  maxRetries       Int               @default(3) @map("max_retries")
+  retryStrategy    RetryStrategy     @default(FIXED) @map("retry_strategy")
+  rule             ReminderRule?
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  deletedAt        DateTime?         @map("deleted_at")
+  createdBy        String?           @map("created_by") @db.VarChar(36)
+  updatedBy        String?           @map("updated_by") @db.VarChar(36)
+  deletedBy        String?           @map("deleted_by") @db.VarChar(36)
+  version          Int               @default(1)
+  history          ReminderHistory[]
+
+  @@index([userId, triggerTime, status], map: "idx_reminders_user_trigger_status")
+  @@map("reminders")
+}
+
+model Goal {
+  id         String          @id @default(uuid()) @db.VarChar(36)
+  userId     String          @map("user_id") @db.VarChar(36)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String          @db.VarChar(255)
+  targetDate DateTime        @map("target_date")
+  progress   Int             @default(0)
+  status     GoalStatus      @default(DRAFT)
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+  deletedAt  DateTime?       @map("deleted_at")
+  createdBy  String?         @map("created_by") @db.VarChar(36)
+  updatedBy  String?         @map("updated_by") @db.VarChar(36)
+  deletedBy  String?         @map("deleted_by") @db.VarChar(36)
+  version    Int             @default(1)
+  milestones GoalMilestone[]
+
+  @@index([userId, status], map: "idx_goals_user_status")
+  @@map("goals")
+}
+
+model GoalMilestone {
+  id          String    @id @default(uuid()) @db.VarChar(36)
+  goalId      String    @map("goal_id") @db.VarChar(36)
+  goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  title       String    @db.VarChar(255)
+  isCompleted Boolean   @default(false) @map("is_completed")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdBy   String?   @map("created_by") @db.VarChar(36)
+  updatedBy   String?   @map("updated_by") @db.VarChar(36)
+  deletedBy   String?   @map("deleted_by") @db.VarChar(36)
+  version     Int       @default(1)
+
+  @@index([goalId], map: "idx_milestones_goal")
+  @@map("goal_milestones")
+}
+
+enum AccountType {
+  CASH
+  BANK
+  UPI
+  CARD
+  WALLET
+  INVESTMENT
+  CRYPTO
+  OTHER
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  ADJUSTMENT
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  POSTED
+  FAILED
+  REVERSED
+  CANCELLED
+}
+
+enum LoanDirection {
+  BORROWED
+  LENT
+}
+
+enum FinancialGoalStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+model Account {
+  id                   String                 @id @default(uuid()) @db.VarChar(36)
+  userId               String                 @map("user_id") @db.VarChar(36)
+  user                 User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                 String                 @db.VarChar(100)
+  type                 AccountType
+  currency             Currency               @default(USD)
+  openingBalance       Decimal                @map("opening_balance") @db.Decimal(18, 4) @default(0.0000)
+  currentBalance       Decimal                @map("current_balance") @db.Decimal(18, 4) @default(0.0000)
+  availableBalance     Decimal                @map("available_balance") @db.Decimal(18, 4) @default(0.0000)
+  allowNegativeBalance Boolean                @map("allow_negative_balance") @default(false)
+  createdAt            DateTime               @default(now()) @map("created_at")
+  updatedAt            DateTime               @updatedAt @map("updated_at")
+  deletedAt            DateTime?              @map("deleted_at")
+  createdBy            String?                @map("created_by") @db.VarChar(36)
+  updatedBy            String?                @map("updated_by") @db.VarChar(36)
+  deletedBy            String?                @map("deleted_by") @db.VarChar(36)
+  version              Int                    @default(1)
+
+  // Relations
+  transactionsSource      Transaction[] @relation("SourceAccount")
+  transactionsDestination Transaction[] @relation("DestinationAccount")
+  ledgerEntries           LedgerEntry[]
+  financialGoals          FinancialGoal[]
+  recurringSource         RecurringTransaction[] @relation("RecurSourceAccount")
+  recurringDestination    RecurringTransaction[] @relation("RecurDestAccount")
+
+  @@map("finance_accounts")
+}
+
+model Transaction {
+  id            String            @id @default(uuid()) @db.VarChar(36)
+  userId        String            @map("user_id") @db.VarChar(36)
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          TransactionType
+  status        TransactionStatus @default(POSTED)
+  amount        Decimal           @db.Decimal(18, 4)
+  currency      Currency          @default(USD)
+  description   String            @db.VarChar(255)
+  reference     String?           @db.VarChar(100)
+  notes         String?           @db.Text
+  transferId    String?           @map("transfer_id") @db.VarChar(36)
+  
+  // Exchange and base equivalents
+  exchangeRate  Decimal           @map("exchange_rate") @db.Decimal(10, 6) @default(1.000000)
+  baseAmount    Decimal           @map("base_amount") @db.Decimal(18, 4)
+
+  // Categories
+  categoryId    String?           @map("category_id") @db.VarChar(36)
+  category      ExpenseCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Accounts
+  accountId     String            @map("account_id") @db.VarChar(36)
+  account       Account           @relation("SourceAccount", fields: [accountId], references: [id], onDelete: Cascade)
+
+  // For transfers
+  toAccountId   String?           @map("to_account_id") @db.VarChar(36)
+  toAccount     Account?          @relation("DestinationAccount", fields: [toAccountId], references: [id], onDelete: SetNull)
+
+  // Recurring link
+  recurringId   String?           @map("recurring_id") @db.VarChar(36)
+  recurring     RecurringTransaction? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
+
+  occurredAt    DateTime          @default(now()) @map("occurred_at")
+  postedAt      DateTime?         @map("posted_at")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+  deletedAt     DateTime?         @map("deleted_at")
+  createdBy     String?           @map("created_by") @db.VarChar(36)
+  updatedBy     String?           @map("updated_by") @db.VarChar(36)
+  deletedBy     String?           @map("deleted_by") @db.VarChar(36)
+  version       Int               @default(1)
+
+  ledgerEntries LedgerEntry[]
+
+  @@index([userId, accountId, occurredAt], map: "idx_transactions_user_account_date")
+  @@map("finance_transactions")
+}
+
+model RecurringTransaction {
+  id              String            @id @default(uuid()) @db.VarChar(36)
+  userId          String            @map("user_id") @db.VarChar(36)
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type            TransactionType
+  amount          Decimal           @db.Decimal(18, 4)
+  currency        Currency          @default(USD)
+  description     String            @db.VarChar(255)
+  categoryId      String?           @map("category_id") @db.VarChar(36)
+  category        ExpenseCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  
+  accountId       String            @map("account_id") @db.VarChar(36)
+  account         Account           @relation("RecurSourceAccount", fields: [accountId], references: [id], onDelete: Cascade)
+  
+  toAccountId     String?           @map("to_account_id") @db.VarChar(36)
+  toAccount       Account?          @relation("RecurDestAccount", fields: [toAccountId], references: [id], onDelete: SetNull)
+  
+  // Recurrence Rule
+  frequency       ReminderFrequency @default(MONTHLY)
+  rrule           String?           @db.VarChar(255)
+  startDate       DateTime          @map("start_date")
+  endDate         DateTime?         @map("end_date")
+  nextRun         DateTime?         @map("next_run")
+  lastRun         DateTime?         @map("last_run")
+  occurrenceCount Int               @default(0) @map("occurrence_count")
+  maxOccurrences  Int?              @map("max_occurrences")
+
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  deletedAt       DateTime?         @map("deleted_at")
+  createdBy       String?           @map("created_by") @db.VarChar(36)
+  updatedBy       String?           @map("updated_by") @db.VarChar(36)
+  deletedBy       String?           @map("deleted_by") @db.VarChar(36)
+  version         Int               @default(1)
+
+  transactions    Transaction[]
+
+  @@map("recurring_transactions")
+}
+
+model LedgerEntry {
+  id            String       @id @default(uuid()) @db.VarChar(36)
+  userId        String       @map("user_id") @db.VarChar(36)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId     String       @map("account_id") @db.VarChar(36)
+  account       Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactionId String?      @map("transaction_id") @db.VarChar(36)
+  transaction   Transaction? @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  amount        Decimal      @db.Decimal(18, 4)
+  type          String       @db.VarChar(10) // "DEBIT" or "CREDIT"
+  description   String       @db.VarChar(255)
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  @@map("finance_ledger_entries")
+}
+
+model FinancialGoal {
+  id             String              @id @default(uuid()) @db.VarChar(36)
+  userId         String              @map("user_id") @db.VarChar(36)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String              @db.VarChar(150)
+  targetAmount   Decimal             @map("target_amount") @db.Decimal(18, 4)
+  savedAmount    Decimal             @map("saved_amount") @db.Decimal(18, 4) @default(0.0000)
+  currency       Currency            @default(USD)
+  deadline       DateTime?
+  status         FinancialGoalStatus @default(ACTIVE)
+  
+  linkedAccountId String?            @map("linked_account_id") @db.VarChar(36)
+  linkedAccount   Account?           @relation(fields: [linkedAccountId], references: [id], onDelete: SetNull)
+
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  deletedAt      DateTime?           @map("deleted_at")
+  createdBy      String?             @map("created_by") @db.VarChar(36)
+  updatedBy      String?             @map("updated_by") @db.VarChar(36)
+  deletedBy      String?             @map("deleted_by") @db.VarChar(36)
+  version        Int                 @default(1)
+
+  @@map("financial_goals")
+}
+
+model ExpenseCategory {
+  id                    String                 @id @default(uuid()) @db.VarChar(36)
+  userId                String                 @map("user_id") @db.VarChar(36)
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                  String                 @db.VarChar(100)
+  parentId              String?                @map("parent_id") @db.VarChar(36)
+  parent                ExpenseCategory?       @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  subCategories         ExpenseCategory[]      @relation("CategoryHierarchy")
+  sortOrder             Int                    @default(0) @map("sort_order")
+  isArchived            Boolean                @default(false) @map("is_archived")
+  isFavorite            Boolean                @default(false) @map("is_favorite")
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+  deletedAt             DateTime?              @map("deleted_at")
+  createdBy             String?                @map("created_by") @db.VarChar(36)
+  updatedBy             String?                @map("updated_by") @db.VarChar(36)
+  deletedBy             String?                @map("deleted_by") @db.VarChar(36)
+  version               Int                    @default(1)
+  expenses              Expense[]
+  transactions          Transaction[]
+  recurringTransactions RecurringTransaction[]
+  budgets               Budget[]
+  groupExpenses         GroupExpense[]
+
+  @@unique([userId, name])
+  @@map("expense_categories")
+}
+
+model Expense {
+  id          String           @id @default(uuid()) @db.VarChar(36)
+  userId      String           @map("user_id") @db.VarChar(36)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Decimal          @db.Decimal(18, 4)
+  currency    Currency
+  description String           @db.VarChar(255)
+  categoryId  String?          @map("category_id") @db.VarChar(36)
+  category    ExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  isRecurring Boolean          @default(false) @map("is_recurring")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  deletedAt   DateTime?        @map("deleted_at")
+  createdBy   String?          @map("created_by") @db.VarChar(36)
+  updatedBy   String?          @map("updated_by") @db.VarChar(36)
+  deletedBy   String?          @map("deleted_by") @db.VarChar(36)
+  version     Int              @default(1)
+
+  @@index([userId, categoryId, createdAt], map: "idx_expenses_user_category_date")
+  @@map("expenses")
+}
+
+model Loan {
+  id             String        @id @default(uuid()) @db.VarChar(36)
+  userId         String        @map("user_id") @db.VarChar(36)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  principal      Decimal       @db.Decimal(18, 4)
+  currency       Currency
+  interestRate   Decimal       @map("interest_rate") @db.Decimal(5, 2)
+  durationMonths Int           @map("duration_months")
+  startDate      DateTime      @map("start_date")
+  status         LoanStatus    @default(ACTIVE)
+  direction      LoanDirection @default(BORROWED)
+  remainingBalance Decimal     @map("remaining_balance") @db.Decimal(18, 4) @default(0.0000)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+  createdBy      String?       @map("created_by") @db.VarChar(36)
+  updatedBy      String?       @map("updated_by") @db.VarChar(36)
+  deletedBy      String?       @map("deleted_by") @db.VarChar(36)
+  version        Int           @default(1)
+  emis           LoanEMI[]
+
+  @@index([userId, status], map: "idx_loans_user_status")
+  @@map("loans")
+}
+
+model LoanEMI {
+  id                    String    @id @default(uuid()) @db.VarChar(36)
+  loanId                String    @map("loan_id") @db.VarChar(36)
+  loan                  Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  amount                Decimal   @db.Decimal(18, 4)
+  currency              Currency
+  dueDate               DateTime  @map("due_date")
+  status                EMIStatus @default(PENDING)
+  installmentNumber     Int       @default(1) @map("installment_number")
+  remainingInstallments Int       @default(0) @map("remaining_installments")
+  paidAt                DateTime? @map("paid_at")
+  lateFee               Decimal   @db.Decimal(18, 4) @default(0.0000) @map("late_fee")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  deletedAt             DateTime? @map("deleted_at")
+  createdBy             String?   @map("created_by") @db.VarChar(36)
+  updatedBy             String?   @map("updated_by") @db.VarChar(36)
+  deletedBy             String?   @map("deleted_by") @db.VarChar(36)
+  version               Int       @default(1)
+
+  @@index([loanId, dueDate, status], map: "idx_emis_loan_due_status")
+  @@map("loan_emis")
+}
+
+model Subscription {
+  id          String             @id @default(uuid()) @db.VarChar(36)
+  userId      String             @map("user_id") @db.VarChar(36)
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String             @db.VarChar(150)
+  amount      Decimal            @db.Decimal(18, 4)
+  currency    Currency           @default(USD)
+  cycle       String             @default("Monthly") @db.VarChar(30)
+  nextBilling DateTime           @map("next_billing")
+  status      SubscriptionStatus @default(ACTIVE)
+  trial       Boolean            @default(false)
+  autoRenew   Boolean            @default(true) @map("auto_renew")
+  cancelledAt DateTime?          @map("cancelled_at")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+  deletedAt   DateTime?          @map("deleted_at")
+  createdBy   String?            @map("created_by") @db.VarChar(36)
+  updatedBy   String?            @map("updated_by") @db.VarChar(36)
+  deletedBy   String?            @map("deleted_by") @db.VarChar(36)
+  version     Int                @default(1)
+
+  @@index([userId, nextBilling, status], map: "idx_subs_user_billing_status")
+  @@map("subscriptions")
+}
+
+model SplitGroup {
+  id              String         @id @default(uuid()) @db.VarChar(36)
+  ownerId         String?        @map("owner_id") @db.VarChar(36)
+  owner           User?          @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  name            String         @db.VarChar(100)
+  description     String?        @db.Text
+  defaultCurrency Currency       @default(USD) @map("default_currency")
+  icon            String?        @db.VarChar(255)
+  status          GroupStatus    @default(ACTIVE)
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  deletedAt       DateTime?      @map("deleted_at")
+  createdBy       String?        @map("created_by") @db.VarChar(36)
+  updatedBy       String?        @map("updated_by") @db.VarChar(36)
+  deletedBy       String?        @map("deleted_by") @db.VarChar(36)
+  version         Int            @default(1)
+  
+  members         SplitMember[]
+  expenses        GroupExpense[]
+  settlements     Settlement[]
+
+  @@index([ownerId])
+  @@map("split_groups")
+}
+
+model SplitMember {
+  id          String         @id @default(uuid()) @db.VarChar(36)
+  groupId     String         @map("group_id") @db.VarChar(36)
+  group       SplitGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId      String?        @map("user_id") @db.VarChar(36)
+  user        User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  displayName String         @map("display_name") @db.VarChar(150)
+  email       String?        @db.VarChar(150)
+  phone       String?        @db.VarChar(50)
+  status      MemberStatus   @default(ACTIVE)
+  joinedAt    DateTime       @default(now()) @map("joined_at")
+  leftAt      DateTime?      @map("left_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  deletedAt   DateTime?      @map("deleted_at")
+  createdBy   String?        @map("created_by") @db.VarChar(36)
+  updatedBy   String?        @map("updated_by") @db.VarChar(36)
+  deletedBy   String?        @map("deleted_by") @db.VarChar(36)
+  version     Int            @default(1)
+
+  payers      ExpensePayer[]
+  participants ExpenseParticipant[]
+  settlementsAsPayer Settlement[] @relation("SettlementPayer")
+  settlementsAsReceiver Settlement[] @relation("SettlementReceiver")
+
+  @@unique([groupId, userId])
+  @@map("split_members")
+}
+
+model GroupExpense {
+  id           String                @id @default(uuid()) @db.VarChar(36)
+  groupId      String                @map("group_id") @db.VarChar(36)
+  group        SplitGroup            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy    String                @map("created_by") @db.VarChar(36)
+  description  String                @db.VarChar(255)
+  currency     Currency
+  totalAmount  Decimal               @map("total_amount") @db.Decimal(18, 4)
+  expenseDate  DateTime              @default(now()) @map("expense_date")
+  categoryId   String?               @map("category_id") @db.VarChar(36)
+  category     ExpenseCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  notes        String?               @db.Text
+  status       ExpenseStatus         @default(ACTIVE)
+  splitType    SplitType             @default(EQUAL) @map("split_type")
+  version      Int                   @default(1)
+  createdAt    DateTime              @default(now()) @map("created_at")
+  updatedAt    DateTime              @updatedAt @map("updated_at")
+  deletedAt    DateTime?             @map("deleted_at")
+  updatedBy    String?               @map("updated_by") @db.VarChar(36)
+  deletedBy    String?               @map("deleted_by") @db.VarChar(36)
+
+  payers       ExpensePayer[]
+  participants ExpenseParticipant[]
+  history      GroupExpenseHistory[]
+
+  @@index([groupId])
+  @@index([expenseDate])
+  @@index([status])
+  @@index([createdBy])
+  @@map("group_expenses")
+}
+
+model ExpensePayer {
+  expenseId  String       @map("expense_id") @db.VarChar(36)
+  expense    GroupExpense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  memberId   String       @map("member_id") @db.VarChar(36)
+  member     SplitMember  @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  amountPaid Decimal      @map("amount_paid") @db.Decimal(18, 4)
+
+  @@id([expenseId, memberId])
+  @@map("expense_payers")
+}
+
+model ExpenseParticipant {
+  expenseId  String       @map("expense_id") @db.VarChar(36)
+  expense    GroupExpense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  memberId   String       @map("member_id") @db.VarChar(36)
+  member     SplitMember  @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  owedAmount Decimal      @map("owed_amount") @db.Decimal(18, 4)
+  percentage Decimal?     @db.Decimal(5, 2)
+  shares     Decimal?     @db.Decimal(10, 2)
+
+  @@id([expenseId, memberId])
+  @@map("expense_participants")
+}
+
+model GroupExpenseHistory {
+  id           String       @id @default(uuid()) @db.VarChar(36)
+  expenseId    String       @map("expense_id") @db.VarChar(36)
+  expense      GroupExpense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  version      Int
+  description  String       @db.VarChar(255)
+  totalAmount  Decimal      @map("total_amount") @db.Decimal(18, 4)
+  currency     Currency
+  splitType    SplitType    @map("split_type")
+  payers       Json // serialized array of payers
+  participants Json // serialized array of participants
+  status       ExpenseStatus
+  metadata     Json? // any other info
+  changedBy    String       @map("changed_by") @db.VarChar(36)
+  changedAt    DateTime     @default(now()) @map("changed_at")
+
+  @@index([expenseId])
+  @@map("group_expense_history")
+}
+
+model Settlement {
+  id               String           @id @default(uuid()) @db.VarChar(36)
+  groupId          String           @map("group_id") @db.VarChar(36)
+  group            SplitGroup       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  payerMemberId    String           @map("payer_member_id") @db.VarChar(36)
+  payerMember      SplitMember      @relation("SettlementPayer", fields: [payerMemberId], references: [id], onDelete: Restrict)
+  receiverMemberId String           @map("receiver_member_id") @db.VarChar(36)
+  receiverMember   SplitMember      @relation("SettlementReceiver", fields: [receiverMemberId], references: [id], onDelete: Restrict)
+  amount           Decimal          @db.Decimal(18, 4)
+  currency         Currency
+  status           SettlementStatus @default(PENDING)
+  settledAt        DateTime?        @map("settled_at")
+  notes            String?          @db.Text
+  idempotencyKey   String?          @unique @map("idempotency_key") @db.VarChar(64)
+  syncToFinance    Boolean          @default(false) @map("sync_to_finance")
+  createdBy        String           @map("created_by") @db.VarChar(36)
+  version          Int              @default(1)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  @@index([groupId])
+  @@index([settledAt])
+  @@map("splitter_settlements")
+}
+
+model VaultFolder {
+  id         String        @id @default(uuid()) @db.VarChar(36)
+  userId     String        @map("user_id") @db.VarChar(36)
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId   String?       @map("parent_id") @db.VarChar(36)
+  parent     VaultFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  subFolders VaultFolder[] @relation("FolderHierarchy")
+  name       String        @db.VarChar(150)
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+  deletedAt  DateTime?     @map("deleted_at")
+  createdBy  String?       @map("created_by") @db.VarChar(36)
+  updatedBy  String?       @map("updated_by") @db.VarChar(36)
+  deletedBy  String?       @map("deleted_by") @db.VarChar(36)
+  version    Int           @default(1)
+  files      VaultFile[]
+  items      VaultItem[]
+
+  @@index([userId, parentId], map: "idx_folders_user_parent")
+  @@map("vault_folders")
+}
+
+model VaultFile {
+  id                String             @id @default(uuid()) @db.VarChar(36)
+  userId            String             @map("user_id") @db.VarChar(36)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folderId          String?            @map("folder_id") @db.VarChar(36)
+  folder            VaultFolder?       @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  name              String             @db.VarChar(255)
+  storagePath       String             @map("storage_path") @db.VarChar(500)
+  fileSize          BigInt             @map("file_size")
+  extension         String             @db.VarChar(15)
+  isFavorite        Boolean            @default(false) @map("is_favorite")
+  isPinned          Boolean            @default(false) @map("is_pinned")
+  checksum          String             @db.VarChar(64)
+  status            FileStatus         @default(SCANNING)
+  mimeType          String?            @map("mime_type") @db.VarChar(100)
+  originalFilename  String?            @map("original_filename") @db.VarChar(255)
+  storageProvider   StorageProvider    @default(LOCAL) @map("storage_provider")
+  storageDisk       String?            @map("storage_disk") @db.VarChar(50)
+  encryptionVersion String?            @map("encryption_version") @db.VarChar(20)
+  contentIv         String?            @map("content_iv") @db.VarChar(64)
+  contentAuthTag    String?            @map("content_auth_tag") @db.VarChar(64)
+  dekVersion        Int                @default(1) @map("dek_version")
+  checksumAlgorithm String?            @map("checksum_algorithm") @db.VarChar(20)
+  scanResult        String?            @map("scan_result") @db.VarChar(100)
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  deletedAt         DateTime?          @map("deleted_at")
+  createdBy         String?            @map("created_by") @db.VarChar(36)
+  updatedBy         String?            @map("updated_by") @db.VarChar(36)
+  deletedBy         String?            @map("deleted_by") @db.VarChar(36)
+  version           Int                @default(1)
+  versions          VaultFileVersion[]
+  ocrJobs           OCRJob[]           @relation("FileInput")
+  pdfSourceFiles    PDFSourceFile[]    @relation("PDFSource")
+  pdfOutputFiles    PDFOutputFile[]    @relation("PDFOutput")
+  userAvatars       User[]             @relation("UserAvatar")
+  todoAttachments   TodoAttachment[]
+  noteAttachments   NoteAttachment[]
+  eventAttachments  EventAttachment[]
+
+  @@index([userId, folderId, status], map: "idx_files_user_folder_status")
+  @@map("vault_files")
+}
+
+model VaultFileVersion {
+  id          String    @id @default(uuid()) @db.VarChar(36)
+  fileId      String    @map("file_id") @db.VarChar(36)
+  file        VaultFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  version     Int       @default(1)
+  storagePath String    @map("storage_path") @db.VarChar(500)
+  fileSize    BigInt    @map("file_size")
+  checksum    String    @db.VarChar(64)
+  contentIv   String?   @map("content_iv") @db.VarChar(64)
+  contentAuthTag String? @map("content_auth_tag") @db.VarChar(64)
+  dekVersion  Int       @default(1) @map("dek_version")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdBy   String?   @map("created_by") @db.VarChar(36)
+  updatedBy   String?   @map("updated_by") @db.VarChar(36)
+  deletedBy   String?   @map("deleted_by") @db.VarChar(36)
+  versionVal  Int       @default(1) @map("version_val")
+
+  @@index([fileId], map: "idx_file_versions_file")
+  @@map("vault_file_versions")
+}
+
+enum VaultItemType {
+  SECURE_NOTE
+  CREDENTIAL
+  PASSWORD
+  API_KEY
+  RECOVERY_CODE
+  IDENTITY
+  DOCUMENT
+  GENERIC_SECRET
+}
+
+model VaultUserKey {
+  id                String    @id @default(uuid()) @db.VarChar(36)
+  userId            String    @unique @map("user_id") @db.VarChar(36)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wrappedKey        String    @map("wrapped_key") @db.Text
+  wrapIv            String    @map("wrap_iv") @db.VarChar(64)
+  wrapAuthTag       String    @map("wrap_auth_tag") @db.VarChar(64)
+  wrappingAlgorithm String    @map("wrapping_algorithm") @db.VarChar(50)
+  kekVersion        Int       @default(1) @map("kek_version")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  rotatedAt         DateTime? @map("rotated_at")
+
+  @@map("vault_user_keys")
+}
+
+model VaultItem {
+  id                String        @id @default(uuid()) @db.VarChar(36)
+  userId            String        @map("user_id") @db.VarChar(36)
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folderId          String?       @map("folder_id") @db.VarChar(36)
+  folder            VaultFolder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  type              VaultItemType
+  title             String        @db.VarChar(150)
+  ciphertext        String        @db.Text
+  contentIv         String        @map("content_iv") @db.VarChar(64)
+  contentAuthTag    String        @map("content_auth_tag") @db.VarChar(64)
+  algorithm         String        @db.VarChar(20) @default("aes-256-gcm")
+  encryptionVersion String        @map("encryption_version") @db.VarChar(20) @default("v1")
+  dekVersion        Int           @default(1) @map("dek_version")
+  isFavorite        Boolean       @default(false) @map("is_favorite")
+  isPinned          Boolean       @default(false) @map("is_pinned")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  deletedAt         DateTime?     @map("deleted_at")
+  createdBy         String?       @map("created_by") @db.VarChar(36)
+  updatedBy         String?       @map("updated_by") @db.VarChar(36)
+  deletedBy         String?       @map("deleted_by") @db.VarChar(36)
+  version           Int           @default(1)
+
+  @@index([userId, folderId], map: "idx_vault_items_user_folder")
+  @@map("vault_items")
+}
+
+model AuditLog {
+  id            String      @id @default(uuid()) @db.VarChar(36)
+  userId        String?     @map("user_id") @db.VarChar(36)
+  tableName     String      @map("table_name") @db.VarChar(100)
+  recordId      String      @map("record_id") @db.VarChar(36)
+  action        AuditAction
+  oldValue      Json?       @map("old_value")
+  newValue      Json?       @map("new_value")
+  correlationId String      @map("correlation_id") @db.VarChar(36)
+  requestId     String?     @map("request_id") @db.VarChar(36)
+  ipAddress     String?     @map("ip_address") @db.VarChar(45)
+  device        String?     @db.VarChar(100)
+  browser       String?     @db.VarChar(100)
+  country       String?     @db.VarChar(100)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  deletedAt     DateTime?   @map("deleted_at")
+  createdBy     String?     @map("created_by") @db.VarChar(36)
+  updatedBy     String?     @map("updated_by") @db.VarChar(36)
+  deletedBy     String?     @map("deleted_by") @db.VarChar(36)
+  version       Int         @default(1)
+
+  @@index([tableName, recordId], map: "idx_audit_table_record")
+  @@index([userId, createdAt], map: "idx_audit_user_date")
+  @@index([correlationId], map: "idx_audit_correlation")
+  @@map("audit_logs")
+}
+
+model Notification {
+  id             String              @id @default(uuid()) @db.VarChar(36)
+  userId         String              @map("user_id") @db.VarChar(36)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String              @db.VarChar(250)
+  body           String              @db.Text
+  type           NotificationType
+  status         NotificationStatus  @default(UNREAD)
+  triggerTime    DateTime            @default(now()) @map("trigger_time")
+  channel        NotificationChannel @default(TELEGRAM)
+  priority       PriorityLevel       @default(MEDIUM)
+  sentAt         DateTime?           @map("sent_at")
+  readAt         DateTime?           @map("read_at")
+  retryCount     Int                 @default(0) @map("retry_count")
+  failedReason   String?             @map("failed_reason") @db.Text
+  deliveryStatus DeliveryStatus      @default(PENDING) @map("delivery_status")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  deletedAt      DateTime?           @map("deleted_at")
+  createdBy      String?             @map("created_by") @db.VarChar(36)
+  updatedBy      String?             @map("updated_by") @db.VarChar(36)
+  deletedBy      String?             @map("deleted_by") @db.VarChar(36)
+  version        Int                 @default(1)
+
+  @@index([userId, status, triggerTime], map: "idx_notifications_user_status_trigger")
+  @@map("notifications")
+}
+
+model PluginRegistry {
+  id         String       @id @default(uuid()) @db.VarChar(36)
+  pluginId   String       @unique @map("plugin_id") @db.VarChar(100)
+  version    String       @db.VarChar(30)
+  status     PluginStatus @default(INACTIVE)
+  manifest   String       @db.Text
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+  deletedAt  DateTime?    @map("deleted_at")
+  createdBy  String?      @map("created_by") @db.VarChar(36)
+  updatedBy  String?      @map("updated_by") @db.VarChar(36)
+  deletedBy  String?      @map("deleted_by") @db.VarChar(36)
+  versionVal Int          @default(1) @map("version_val")
+
+  @@map("plugin_registry")
+}
+
+model Role {
+  id              String           @id @default(uuid()) @db.VarChar(36)
+  name            String           @unique @db.VarChar(50)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  deletedAt       DateTime?        @map("deleted_at")
+  createdBy       String?          @map("created_by") @db.VarChar(36)
+  updatedBy       String?          @map("updated_by") @db.VarChar(36)
+  deletedBy       String?          @map("deleted_by") @db.VarChar(36)
+  version         Int              @default(1)
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("roles")
+}
+
+model PermissionGroup {
+  id          String       @id @default(uuid()) @db.VarChar(36)
+  name        String       @unique @db.VarChar(100)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  deletedAt   DateTime?    @map("deleted_at")
+  createdBy   String?      @map("created_by") @db.VarChar(36)
+  updatedBy   String?      @map("updated_by") @db.VarChar(36)
+  deletedBy   String?      @map("deleted_by") @db.VarChar(36)
+  version     Int          @default(1)
+  permissions Permission[]
+
+  @@map("permission_groups")
+}
+
+model Permission {
+  id              String           @id @default(uuid()) @db.VarChar(36)
+  name            String           @unique @db.VarChar(100)
+  groupId         String?          @map("group_id") @db.VarChar(36)
+  group           PermissionGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  deletedAt       DateTime?        @map("deleted_at")
+  createdBy       String?          @map("created_by") @db.VarChar(36)
+  updatedBy       String?          @map("updated_by") @db.VarChar(36)
+  deletedBy       String?          @map("deleted_by") @db.VarChar(36)
+  version         Int              @default(1)
+  rolePermissions RolePermission[]
+
+  @@index([groupId], map: "idx_permissions_group")
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String     @map("role_id") @db.VarChar(36)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String     @map("permission_id") @db.VarChar(36)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  deletedAt    DateTime?  @map("deleted_at")
+  createdBy    String?    @map("created_by") @db.VarChar(36)
+  updatedBy    String?    @map("updated_by") @db.VarChar(36)
+  deletedBy    String?    @map("deleted_by") @db.VarChar(36)
+  version      Int        @default(1)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId    String    @map("user_id") @db.VarChar(36)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId    String    @map("role_id") @db.VarChar(36)
+  role      Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String?   @map("created_by") @db.VarChar(36)
+  updatedBy String?   @map("updated_by") @db.VarChar(36)
+  deletedBy String?   @map("deleted_by") @db.VarChar(36)
+  version   Int       @default(1)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model Session {
+  id               String    @id @default(uuid()) @db.VarChar(36)
+  userId           String    @map("user_id") @db.VarChar(36)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String    @unique @map("refresh_token_hash") @db.VarChar(64)
+  ipAddress        String?   @map("ip_address") @db.VarChar(45)
+  userAgent        String?   @map("user_agent") @db.VarChar(255)
+  expiresAt        DateTime  @map("expires_at")
+  deviceName       String?   @map("device_name") @db.VarChar(100)
+  platform         String?   @db.VarChar(50)
+  browser          String?   @db.VarChar(50)
+  os               String?   @db.VarChar(50)
+  lastActivityAt   DateTime? @map("last_activity_at")
+  revokedAt        DateTime? @map("revoked_at")
+  country          String?   @db.VarChar(100)
+  city             String?   @db.VarChar(100)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+  createdBy        String?   @map("created_by") @db.VarChar(36)
+  updatedBy        String?   @map("updated_by") @db.VarChar(36)
+  deletedBy        String?   @map("deleted_by") @db.VarChar(36)
+  version          Int       @default(1)
+
+  @@index([refreshTokenHash], map: "idx_sessions_token_hash")
+  @@index([userId, expiresAt], map: "idx_sessions_user_expiry")
+  @@map("sessions")
+}
+
+model Birthday {
+  id               String    @id @default(uuid()) @db.VarChar(36)
+  userId           String    @map("user_id") @db.VarChar(36)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contactName      String    @map("contact_name") @db.VarChar(200)
+  birthdate        DateTime  @db.Date
+  remindDaysBefore Int       @default(0) @map("remind_days_before")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+  createdBy        String?   @map("created_by") @db.VarChar(36)
+  updatedBy        String?   @map("updated_by") @db.VarChar(36)
+  deletedBy        String?   @map("deleted_by") @db.VarChar(36)
+  version          Int       @default(1)
+
+  @@index([userId, birthdate], map: "idx_birthdays_user_date")
+  @@map("birthdays")
+}
+
+model ReminderHistory {
+  id            String         @id @default(uuid()) @db.VarChar(36)
+  reminderId    String         @map("reminder_id") @db.VarChar(36)
+  reminder      Reminder       @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+  executionId   String         @map("execution_id") @db.VarChar(36)
+  triggerSource String         @map("trigger_source") @db.VarChar(100)
+  workerId      String?        @map("worker_id") @db.VarChar(100)
+  scheduledAt   DateTime       @map("scheduled_at")
+  executedAt    DateTime       @default(now()) @map("executed_at")
+  duration      Int            // In milliseconds
+  result        ReminderStatus
+  error         String?        @db.Text
+  retry         Int            @default(0)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  deletedAt     DateTime?      @map("deleted_at")
+  createdBy     String?        @map("created_by") @db.VarChar(36)
+  updatedBy     String?        @map("updated_by") @db.VarChar(36)
+  deletedBy     String?        @map("deleted_by") @db.VarChar(36)
+  version       Int            @default(1)
+
+  @@index([reminderId, executedAt], map: "idx_rem_hist_reminder_date")
+  @@index([executionId], map: "idx_rem_hist_execution_id")
+  @@map("reminder_history")
+}
+
+model BackgroundJob {
+  id         String                @id @default(uuid()) @db.VarChar(36)
+  jobType    JobType               @map("job_type")
+  payload    String                @db.Text
+  status     JobStatus             @default(PENDING)
+  retryCount Int                   @default(0) @map("retry_count")
+  errorLog   String?               @map("error_log") @db.Text
+  queue      String?               @db.VarChar(50)
+  priority   BackgroundJobPriority @default(MEDIUM)
+  progress   Int                   @default(0)
+  worker     String?               @db.VarChar(100)
+  attempts   Int                   @default(0)
+  startedAt  DateTime?             @map("started_at")
+  finishedAt DateTime?             @map("finished_at")
+  createdAt  DateTime              @default(now()) @map("created_at")
+  updatedAt  DateTime              @updatedAt @map("updated_at")
+  deletedAt  DateTime?             @map("deleted_at")
+  createdBy  String?               @map("created_by") @db.VarChar(36)
+  updatedBy  String?               @map("updated_by") @db.VarChar(36)
+  deletedBy  String?               @map("deleted_by") @db.VarChar(36)
+  version    Int                   @default(1)
+
+  @@index([status, priority, queue], map: "idx_jobs_status_priority_queue")
+  @@map("background_jobs")
+}
+
+model WebhookLog {
+  id        String        @id @default(uuid()) @db.VarChar(36)
+  updateId  BigInt        @unique @map("update_id")
+  payload   String        @db.Text
+  status    WebhookStatus @default(RECEIVED)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  deletedAt DateTime?     @map("deleted_at")
+  createdBy String?       @map("created_by") @db.VarChar(36)
+  updatedBy String?       @map("updated_by") @db.VarChar(36)
+  deletedBy String?       @map("deleted_by") @db.VarChar(36)
+  version   Int           @default(1)
+
+  @@index([status, createdAt], map: "idx_webhooks_received")
+  @@map("webhook_logs")
+}
+
+model SearchIndexMetadata {
+  id             String           @id @default(uuid()) @db.VarChar(36)
+  userId         String           @map("user_id") @db.VarChar(36)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetTable    String           @map("target_table") @db.VarChar(100)
+  targetId       String           @map("target_id") @db.VarChar(36)
+  searchableText String           @map("searchable_text") @db.Text
+  entityType     SearchEntityType @map("entity_type")
+  rankingScore   Decimal?         @map("ranking_score") @db.Decimal(5, 2)
+  indexedAt      DateTime         @default(now()) @map("indexed_at")
+  language       Language         @default(EN)
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  deletedAt      DateTime?        @map("deleted_at")
+  createdBy      String?          @map("created_by") @db.VarChar(36)
+  updatedBy      String?          @map("updated_by") @db.VarChar(36)
+  deletedBy      String?          @map("deleted_by") @db.VarChar(36)
+  version        Int              @default(1)
+
+  @@index([userId, entityType], map: "idx_search_user_entity")
+  @@index([targetTable, targetId], map: "idx_search_target")
+  @@map("search_index_metadata")
+}
+
+model Note {
+  id                   String           @id @default(uuid()) @db.VarChar(36)
+  userId               String           @map("user_id") @db.VarChar(36)
+  user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title                String           @db.VarChar(150)
+  content              String           @db.Text
+  isPinned             Boolean          @default(false) @map("is_pinned")
+  isArchived           Boolean          @default(false) @map("is_archived")
+  isTrashed            Boolean          @default(false) @map("is_trashed")
+  isFavorite           Boolean          @default(false) @map("is_favorite")
+  type                 NoteType         @default(PLAIN)
+  
+  // Derived metadata
+  wordCount            Int              @default(0) @map("word_count")
+  characterCount       Int              @default(0) @map("character_count")
+  estimatedReadingTime Int              @default(0) @map("estimated_reading_time") // In seconds
+
+  // Folders
+  folderId             String?          @map("folder_id") @db.VarChar(36)
+  folder               NoteFolder?      @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+  deletedAt            DateTime?        @map("deleted_at")
+  createdBy            String?          @map("created_by") @db.VarChar(36)
+  updatedBy            String?          @map("updated_by") @db.VarChar(36)
+  deletedBy            String?          @map("deleted_by") @db.VarChar(36)
+  version              Int              @default(1)
+
+  versions             NoteVersion[]
+  tagMaps              NoteTagMap[]
+  attachments          NoteAttachment[]
+
+  @@index([userId, isPinned, isArchived, isTrashed], map: "idx_notes_user_status")
+  @@map("notes")
+}
+
+model NoteVersion {
+  id            String    @id @default(uuid()) @db.VarChar(36)
+  noteId        String    @map("note_id") @db.VarChar(36)
+  note          Note      @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  versionNumber Int       @map("version_number")
+  title         String    @db.VarChar(150)
+  content       String    @db.Text
+  summary       String?   @db.VarChar(255)
+  editedById    String?   @map("edited_by_id") @db.VarChar(36)
+  editedBy      User?     @relation("NoteVersionEditor", fields: [editedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdBy     String?   @map("created_by") @db.VarChar(36)
+  updatedBy     String?   @map("updated_by") @db.VarChar(36)
+  deletedBy     String?   @map("deleted_by") @db.VarChar(36)
+  version       Int       @default(1)
+
+  @@index([noteId, versionNumber], map: "idx_note_versions_note_ver")
+  @@map("note_versions")
+}
+
+model NoteTag {
+  id        String       @id @default(uuid()) @db.VarChar(36)
+  name      String       @db.VarChar(50)
+  userId    String       @map("user_id") @db.VarChar(36)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  deletedAt DateTime?    @map("deleted_at")
+  createdBy String?      @map("created_by") @db.VarChar(36)
+  updatedBy String?      @map("updated_by") @db.VarChar(36)
+  deletedBy String?      @map("deleted_by") @db.VarChar(36)
+  version   Int          @default(1)
+  tagMaps   NoteTagMap[]
+
+  @@index([userId, name], map: "idx_note_tags_user_name")
+  @@map("note_tags")
+}
+
+model NoteTagMap {
+  noteId    String    @map("note_id") @db.VarChar(36)
+  note      Note      @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tagId     String    @map("tag_id") @db.VarChar(36)
+  tag       NoteTag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String?   @map("created_by") @db.VarChar(36)
+  updatedBy String?   @map("updated_by") @db.VarChar(36)
+  deletedBy String?   @map("deleted_by") @db.VarChar(36)
+  version   Int       @default(1)
+
+  @@id([noteId, tagId])
+  @@map("note_tag_maps")
+}
+
+model CalendarEvent {
+  id                      String                     @id @default(uuid()) @db.VarChar(36)
+  calendarId              String                     @map("calendar_id") @db.VarChar(36)
+  calendar                Calendar                   @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  userId                  String                     @map("user_id") @db.VarChar(36)
+  user                    User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title                   String                     @db.VarChar(255)
+  description             String?                    @db.Text
+  startAt                 DateTime                   @map("start_time")
+  endAt                   DateTime                   @map("end_time")
+  timezone                String                     @default("UTC") @db.VarChar(100)
+  isAllDay                Boolean                    @default(false) @map("is_all_day")
+  type                    EventType                  @default(EVENT)
+  status                  EventStatus                @default(SCHEDULED)
+  locationName            String?                    @map("location_name") @db.VarChar(255)
+  locationAddress         String?                    @map("location_address") @db.Text
+  latitude                Decimal?                   @db.Decimal(10, 8)
+  longitude               Decimal?                   @db.Decimal(11, 8)
+  meetingUrl              String?                    @map("meeting_url") @db.VarChar(500)
+  recurrenceFrequency     RecurrenceFrequency        @default(NONE) @map("recurrence_frequency")
+  rrule                   String?                    @db.VarChar(200)
+  recurrenceEndAt         DateTime?                  @map("recurrence_end_at")
+  recurrenceCount         Int?                       @map("recurrence_count")
+  parentRecurringEventId  String?                    @map("parent_recurring_event_id") @db.VarChar(36)
+  todoId                  String?                    @map("todo_id") @db.VarChar(36)
+  noteId                  String?                    @map("note_id") @db.VarChar(36)
+  version                 Int                        @default(1)
+  createdAt               DateTime                   @default(now()) @map("created_at")
+  updatedAt               DateTime                   @updatedAt @map("updated_at")
+  deletedAt               DateTime?                  @map("deleted_at")
+  createdBy               String?                    @map("created_by") @db.VarChar(36)
+  updatedBy               String?                    @map("updated_by") @db.VarChar(36)
+  deletedBy               String?                    @map("deleted_by") @db.VarChar(36)
+  completedAt             DateTime?                  @map("completed_at")
+  cancelledAt             DateTime?                  @map("cancelled_at")
+  reminders               CalendarReminder[]
+  attendees               CalendarAttendee[]
+  attachments             EventAttachment[]
+  recurrenceExceptions    EventRecurrenceException[]
+
+  @@index([userId, startAt])
+  @@index([calendarId, startAt])
+  @@index([userId, status, startAt])
+  @@index([todoId])
+  @@index([noteId])
+  @@map("calendar_events")
+}
+
+model CalendarReminder {
+  id            String         @id @default(uuid()) @db.VarChar(36)
+  eventId       String         @map("event_id") @db.VarChar(36)
+  event         CalendarEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  offsetMinutes Int            @map("offset_minutes")
+  triggerTime   DateTime       @map("trigger_time")
+  status        ReminderStatus @default(PENDING)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  deletedAt     DateTime?      @map("deleted_at")
+  createdBy     String?        @map("created_by") @db.VarChar(36)
+  updatedBy     String?        @map("updated_by") @db.VarChar(36)
+  deletedBy     String?        @map("deleted_by") @db.VarChar(36)
+  version       Int            @default(1)
+
+  @@index([eventId, triggerTime, status], map: "idx_cal_reminders_event_trigger_status")
+  @@map("calendar_reminders")
+}
+
+model CalendarAttendee {
+  id               String         @id @default(uuid()) @db.VarChar(36)
+  eventId          String         @map("event_id") @db.VarChar(36)
+  event            CalendarEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId           String?        @map("user_id") @db.VarChar(36)
+  email            String?        @db.VarChar(150)
+  name             String         @db.VarChar(150)
+  status           AttendeeStatus @default(PENDING)
+  telegramUsername String?        @map("telegram_username") @db.VarChar(100)
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  deletedAt        DateTime?      @map("deleted_at")
+  createdBy        String?        @map("created_by") @db.VarChar(36)
+  updatedBy        String?        @map("updated_by") @db.VarChar(36)
+  deletedBy        String?        @map("deleted_by") @db.VarChar(36)
+  version          Int            @default(1)
+
+  @@index([eventId, status], map: "idx_cal_attendees_event_status")
+  @@map("calendar_attendees")
+}
+
+model Calendar {
+  id          String        @id @default(uuid()) @db.VarChar(36)
+  userId      String        @map("user_id") @db.VarChar(36)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String        @db.VarChar(100)
+  description String?       @db.Text
+  type        CalendarType  @default(PERSONAL)
+  timezone    String        @default("UTC") @db.VarChar(100)
+  isDefault   Boolean       @default(false) @map("is_default")
+  isVisible   Boolean       @default(true) @map("is_visible")
+  sortOrder   Int           @default(0) @map("sort_order")
+  version     Int           @default(1)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  deletedAt   DateTime?     @map("deleted_at")
+  createdBy   String?       @map("created_by") @db.VarChar(36)
+  updatedBy   String?       @map("updated_by") @db.VarChar(36)
+  deletedBy   String?       @map("deleted_by") @db.VarChar(36)
+  events      CalendarEvent[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("calendars")
+}
+
+model EventAttachment {
+  id          String        @id @default(uuid()) @db.VarChar(36)
+  eventId     String        @map("event_id") @db.VarChar(36)
+  event       CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  vaultFileId String        @map("vault_file_id") @db.VarChar(36)
+  vaultFile   VaultFile     @relation(fields: [vaultFileId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@unique([eventId, vaultFileId])
+  @@map("calendar_event_attachments")
+}
+
+model EventRecurrenceException {
+  id                   String        @id @default(uuid()) @db.VarChar(36)
+  eventId              String        @map("event_id") @db.VarChar(36)
+  event                CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  originalOccurrenceAt DateTime      @map("original_occurrence_at")
+  type                 String        @db.VarChar(50)
+  overrideData         Json?         @map("override_data")
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  @@unique([eventId, originalOccurrenceAt])
+  @@map("calendar_event_recurrence_exceptions")
+}
+
+enum CalendarType {
+  PERSONAL
+  WORK
+  BIRTHDAY
+  CUSTOM
+}
+
+enum EventType {
+  EVENT
+  MEETING
+  APPOINTMENT
+  BIRTHDAY
+  DEADLINE
+  BLOCK
+  CUSTOM
+}
+
+enum EventStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum RecurrenceFrequency {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+  RRULE
+}
+
+model Budget {
+  id         String          @id @default(uuid()) @db.VarChar(36)
+  userId     String          @map("user_id") @db.VarChar(36)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount     Decimal         @db.Decimal(18, 4)
+  currency   Currency        @default(USD)
+  period     BudgetPeriod    @default(MONTHLY)
+  startDate  DateTime        @map("start_date")
+  endDate    DateTime        @map("end_date")
+  categoryId String?         @map("category_id") @db.VarChar(36)
+  category   ExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+  deletedAt  DateTime?       @map("deleted_at")
+  createdBy  String?         @map("created_by") @db.VarChar(36)
+  updatedBy  String?         @map("updated_by") @db.VarChar(36)
+  deletedBy  String?         @map("deleted_by") @db.VarChar(36)
+  version    Int             @default(1)
+
+  @@index([userId, categoryId, startDate, endDate], map: "idx_budgets_user_cat_dates")
+  @@map("budgets")
+}
+
+model OCRJob {
+  id          String     @id @default(uuid()) @db.VarChar(36)
+  userId      String     @map("user_id") @db.VarChar(36)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inputFileId String?    @map("input_file_id") @db.VarChar(36)
+  inputFile   VaultFile? @relation("FileInput", fields: [inputFileId], references: [id], onDelete: SetNull)
+  language    Language?
+  status      JobStatus  @default(PENDING)
+  confidence  Decimal?   @db.Decimal(5, 2)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  deletedAt   DateTime?  @map("deleted_at")
+  createdBy   String?    @map("created_by") @db.VarChar(36)
+  updatedBy   String?    @map("updated_by") @db.VarChar(36)
+  deletedBy   String?    @map("deleted_by") @db.VarChar(36)
+  version     Int        @default(1)
+  pages       OCRPage[]
+
+  @@index([userId, status], map: "idx_ocr_jobs_user_status")
+  @@map("ocr_jobs")
+}
+
+model OCRPage {
+  id         String      @id @default(uuid()) @db.VarChar(36)
+  jobId      String      @map("job_id") @db.VarChar(36)
+  job        OCRJob      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  pageNumber Int         @map("page_number")
+  status     JobStatus   @default(PENDING)
+  confidence Decimal?    @db.Decimal(5, 2)
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+  deletedAt  DateTime?   @map("deleted_at")
+  createdBy  String?     @map("created_by") @db.VarChar(36)
+  updatedBy  String?     @map("updated_by") @db.VarChar(36)
+  deletedBy  String?     @map("deleted_by") @db.VarChar(36)
+  version    Int         @default(1)
+  results    OCRResult[]
+
+  @@index([jobId, pageNumber], map: "idx_ocr_pages_job_page")
+  @@map("ocr_pages")
+}
+
+model OCRResult {
+  id          String    @id @default(uuid()) @db.VarChar(36)
+  pageId      String    @map("page_id") @db.VarChar(36)
+  page        OCRPage   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  text        String    @db.Text
+  confidence  Decimal   @db.Decimal(5, 2)
+  boundingBox Json?     @map("bounding_box")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdBy   String?   @map("created_by") @db.VarChar(36)
+  updatedBy   String?   @map("updated_by") @db.VarChar(36)
+  deletedBy   String?   @map("deleted_by") @db.VarChar(36)
+  version     Int       @default(1)
+
+  @@index([pageId], map: "idx_ocr_results_page")
+  @@map("ocr_results")
+}
+
+model PDFJob {
+  id          String          @id @default(uuid()) @db.VarChar(36)
+  userId      String          @map("user_id") @db.VarChar(36)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobType     DocumentJobType @map("job_type")
+  status      JobStatus       @default(PENDING)
+  errorLog    String?         @map("error_log") @db.Text
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  deletedAt   DateTime?       @map("deleted_at")
+  createdBy   String?         @map("created_by") @db.VarChar(36)
+  updatedBy   String?         @map("updated_by") @db.VarChar(36)
+  deletedBy   String?         @map("deleted_by") @db.VarChar(36)
+  version     Int             @default(1)
+  sourceFiles PDFSourceFile[]
+  outputFiles PDFOutputFile[]
+
+  @@index([userId, status], map: "idx_pdf_jobs_user_status")
+  @@map("pdf_jobs")
+}
+
+model PDFSourceFile {
+  id            String    @id @default(uuid()) @db.VarChar(36)
+  jobId         String    @map("job_id") @db.VarChar(36)
+  job           PDFJob    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  fileId        String    @map("file_id") @db.VarChar(36)
+  file          VaultFile @relation("PDFSource", fields: [fileId], references: [id], onDelete: Cascade)
+  sequenceOrder Int       @map("sequence_order")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdBy     String?   @map("created_by") @db.VarChar(36)
+  updatedBy     String?   @map("updated_by") @db.VarChar(36)
+  deletedBy     String?   @map("deleted_by") @db.VarChar(36)
+  version       Int       @default(1)
+
+  @@index([jobId, sequenceOrder], map: "idx_pdf_source_files_job_seq")
+  @@map("pdf_source_files")
+}
+
+model PDFOutputFile {
+  id        String    @id @default(uuid()) @db.VarChar(36)
+  jobId     String    @map("job_id") @db.VarChar(36)
+  job       PDFJob    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  fileId    String    @map("file_id") @db.VarChar(36)
+  file      VaultFile @relation("PDFOutput", fields: [fileId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String?   @map("created_by") @db.VarChar(36)
+  updatedBy String?   @map("updated_by") @db.VarChar(36)
+  deletedBy String?   @map("deleted_by") @db.VarChar(36)
+  version   Int       @default(1)
+
+  @@index([jobId], map: "idx_pdf_output_files_job")
+  @@map("pdf_output_files")
+}
+
+model DashboardSnapshot {
+  id           String    @id @default(uuid()) @db.VarChar(36)
+  userId       String    @map("user_id") @db.VarChar(36)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snapshotData Json      @map("snapshot_data")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdBy    String?   @map("created_by") @db.VarChar(36)
+  updatedBy    String?   @map("updated_by") @db.VarChar(36)
+  deletedBy    String?   @map("deleted_by") @db.VarChar(36)
+  version      Int       @default(1)
+
+  @@index([userId, createdAt])
+  @@map("dashboard_snapshots")
+}
+
+model TelegramConversation {
+  id           String   @id @default(uuid()) @db.VarChar(36)
+  userId       BigInt   @map("user_id")
+  chatId       BigInt   @map("chat_id")
+  currentState String   @default("START") @map("current_state") @db.VarChar(100)
+  handlerId    String?  @map("handler_id") @db.VarChar(100)
+  step         Int      @default(0)
+  stateData    String   @map("state_data") @db.Text
+  stackData    String   @map("stack_data") @db.Text
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, chatId], name: "uq_telegram_conversations_user_chat")
+  @@map("telegram_conversations")
+}
+
+enum Theme {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+enum WeekDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum TimeFormat {
+  H12
+  H24
+}
+
+enum DateFormat {
+  YYYY_MM_DD
+  DD_MM_YYYY
+  MM_DD_YYYY
+}
+
+enum MeasurementUnit {
+  METRIC
+  IMPERIAL
+}
+
+model Project {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  name      String   @db.VarChar(255)
+  userId    String   @map("user_id") @db.VarChar(36)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  todos     Todo[]
+
+  @@unique([userId, name])
+  @@map("todo_projects")
+}
+
+model TodoList {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  name      String   @db.VarChar(255)
+  userId    String   @map("user_id") @db.VarChar(36)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  todos     Todo[]
+
+  @@unique([userId, name])
+  @@map("todo_lists")
+}
+
+model Label {
+  id        String      @id @default(uuid()) @db.VarChar(36)
+  name      String      @db.VarChar(100)
+  userId    String      @map("user_id") @db.VarChar(36)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  color     String?     @db.VarChar(7) // Hex color code
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+  todos     TodoLabel[]
+
+  @@unique([userId, name])
+  @@map("todo_labels")
+}
+
+model TodoLabel {
+  todoId  String @map("todo_id") @db.VarChar(36)
+  labelId String @map("label_id") @db.VarChar(36)
+  todo    Todo   @relation(fields: [todoId], references: [id], onDelete: Cascade)
+  label   Label  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([todoId, labelId])
+  @@map("todo_label_mappings")
+}
+
+model TodoAttachment {
+  id           String    @id @default(uuid()) @db.VarChar(36)
+  todoId       String    @map("todo_id") @db.VarChar(36)
+  todo         Todo      @relation(fields: [todoId], references: [id], onDelete: Cascade)
+  vaultFileId  String    @map("vault_file_id") @db.VarChar(36)
+  vaultFile    VaultFile @relation(fields: [vaultFileId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("todo_attachments")
+}
+
+model TodoComment {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  todoId    String   @map("todo_id") @db.VarChar(36)
+  todo      Todo     @relation(fields: [todoId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id") @db.VarChar(36)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("todo_comments")
+}
+
+model Checklist {
+  id        String          @id @default(uuid()) @db.VarChar(36)
+  todoId    String          @map("todo_id") @db.VarChar(36)
+  todo      Todo            @relation(fields: [todoId], references: [id], onDelete: Cascade)
+  title     String          @db.VarChar(255)
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  items     ChecklistItem[]
+
+  @@map("todo_checklists")
+}
+
+model ChecklistItem {
+  id          String    @id @default(uuid()) @db.VarChar(36)
+  checklistId String    @map("checklist_id") @db.VarChar(36)
+  checklist   Checklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  title       String    @db.VarChar(255)
+  isCompleted Boolean   @default(false) @map("is_completed")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("todo_checklist_items")
+}
+
+model TodoHistory {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  todoId    String   @map("todo_id") @db.VarChar(36)
+  todo      Todo     @relation(fields: [todoId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id") @db.VarChar(36)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  field     String   @db.VarChar(100)
+  oldValue  String?  @map("old_value") @db.Text
+  newValue  String?  @map("new_value") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("todo_history")
+}
+
+model TodoDependency {
+  id              String   @id @default(uuid()) @db.VarChar(36)
+  todoId          String   @map("todo_id") @db.VarChar(36)
+  dependsOnTodoId String   @map("depends_on_todo_id") @db.VarChar(36)
+  todo            Todo     @relation("TodoDependent", fields: [todoId], references: [id], onDelete: Cascade)
+  dependsOnTodo   Todo     @relation("TodoDependency", fields: [dependsOnTodoId], references: [id], onDelete: Cascade)
+
+  @@unique([todoId, dependsOnTodoId])
+  @@map("todo_dependencies")
+}
+
+model ReminderRule {
+  id              String            @id @default(uuid()) @db.VarChar(36)
+  reminderId      String            @unique @map("reminder_id") @db.VarChar(36)
+  reminder        Reminder          @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+  frequency       ReminderFrequency @default(ONETIME)
+  rrule           String?           @db.VarChar(255)
+  timezone        String            @default("UTC") @db.VarChar(50)
+  startAt         DateTime?         @map("start_at")
+  endAt           DateTime?         @map("end_at")
+  occurrenceCount Int               @default(0) @map("occurrence_count")
+  maxOccurrences  Int?              @map("max_occurrences")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  @@map("reminder_rules")
+}
+
+enum NoteType {
+  PLAIN
+  MARKDOWN
+  CHECKLIST
+  JOURNAL
+  REFERENCE
+  SNIPPET
+}
+
+model NoteFolder {
+  id         String       @id @default(uuid()) @db.VarChar(36)
+  name       String       @db.VarChar(100)
+  userId     String       @map("user_id") @db.VarChar(36)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId   String?      @map("parent_id") @db.VarChar(36)
+  parent     NoteFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  subFolders NoteFolder[] @relation("FolderHierarchy")
+  sortOrder  Int          @default(0) @map("sort_order")
+  isArchived Boolean      @default(false) @map("is_archived")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+  notes      Note[]
+
+  @@unique([userId, parentId, name])
+  @@map("note_folders")
+}
+
+model NoteAttachment {
+  id           String    @id @default(uuid()) @db.VarChar(36)
+  noteId       String    @map("note_id") @db.VarChar(36)
+  note         Note      @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  vaultFileId  String    @map("vault_file_id") @db.VarChar(36)
+  vaultFile    VaultFile @relation(fields: [vaultFileId], references: [id], onDelete: Cascade)
+  displayOrder Int       @default(0) @map("display_order")
+  caption      String?   @db.VarChar(255)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("note_attachments")
+}
+
+model OutboxEvent {
+  id            String    @id @default(uuid()) @db.Uuid
+  eventId       String    @unique @map("event_id") @db.Uuid
+  eventType     String    @map("event_type") @db.VarChar(255)
+  aggregateType String?   @map("aggregate_type") @db.VarChar(255)
+  aggregateId   String?   @map("aggregate_id") @db.VarChar(255)
+  payload       Json
+  metadata      Json?
+  status        String    @db.VarChar(50) // PENDING, PROCESSING, PROCESSED, RETRY, DEAD_LETTER
+  attemptCount  Int       @default(0) @map("attempt_count")
+  maxAttempts   Int       @default(5) @map("max_attempts")
+  availableAt   DateTime  @default(now()) @map("available_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  processedAt   DateTime? @map("processed_at")
+  failedAt      DateTime? @map("failed_at")
+  lastError     String?   @map("last_error") @db.Text
+  lockedAt      DateTime? @map("locked_at")
+  lockedBy      String?   @map("locked_by") @db.VarChar(255)
+  correlationId String?   @map("correlation_id") @db.VarChar(255)
+  requestId     String?   @map("request_id") @db.VarChar(255)
+  version       Int       @default(1)
+
+  @@index([status, availableAt])
+  @@index([status, lockedAt])
+  @@index([eventType])
+  @@index([aggregateType, aggregateId, createdAt])
+  @@map("outbox_events")
+}
+
+model ProcessedEvent {
+  id           String   @id @default(uuid()) @db.Uuid
+  eventId      String   @map("event_id") @db.Uuid
+  consumerName String   @map("consumer_name") @db.VarChar(255)
+  processedAt  DateTime @default(now()) @map("processed_at")
+
+  @@unique([eventId, consumerName])
+  @@index([eventId])
+  @@map("processed_events")
+}
+
+
+

@@ -1,0 +1,6563 @@
+openapi: 3.1.0
+info:
+  title: DevMate Core API Specification
+  description: |
+    Production-ready REST and RPC API contract for the DevMate Telegram-based Personal Operating System platform.
+    Defines schemas, endpoints, error response wrappers, webhooks, and callbacks for delivery adapters and future clients.
+  version: 1.0.0
+  termsOfService: https://devmate.internal/terms
+  contact:
+    name: DevMate API Platform Team
+    email: platform-api@devmate.internal
+    url: https://devmate.internal/support
+  license:
+    name: Proprietary License
+    url: https://devmate.internal/license
+externalDocs:
+  description: Platform Architecture & FSD References
+  url: https://devmate.internal/docs/architecture
+servers:
+  - url: https://api.devmate.internal/v1
+    description: Production Server Gateway
+  - url: https://staging-api.devmate.internal/v1
+    description: Staging Environment Server
+  - url: https://dev-api.devmate.internal/v1
+    description: Development Integration Server
+  - url: http://localhost:8080/v1
+    description: Local Developer Container Server
+security:
+  - BearerAuth: []
+paths:
+  /auth/telegram:
+    post:
+      summary: Authenticate with Telegram
+      description: Validates Telegram login credentials hash signature and returns a session access token.
+      operationId: authenticateTelegram
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramAuthRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      description: Issues a new short-lived access token using the refresh token stored in secure cookies.
+      operationId: refreshAccessToken
+      tags:
+        - Authentication
+      security:
+        - RefreshTokenCookie: []
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/logout:
+    post:
+      summary: Terminate session
+      description: Invalidates active access and refresh tokens, terminating the user session.
+      operationId: logoutSession
+      tags:
+        - Authentication
+      responses:
+        '204':
+          description: Session terminated successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /users/me:
+    get:
+      summary: Retrieve current user profile
+      description: Gets the authenticated user's core details.
+      operationId: getCurrentUser
+      tags:
+        - Users
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /users/me/profile:
+    patch:
+      summary: Update profile details
+      description: Modifies names and username fields for the current user.
+      operationId: updateProfile
+      tags:
+        - Profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /users/me/preferences:
+    patch:
+      summary: Update preferences configuration
+      description: Update language, base currency, and timezones preferences.
+      operationId: updatePreferences
+      tags:
+        - Settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePreferencesRequest'
+      responses:
+        '200':
+          description: Preferences updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreferencesResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /settings:
+    get:
+      summary: Get user settings
+      description: Retrieve global flags, notification switches, and quiet hour schedules.
+      operationId: getSettings
+      tags:
+        - Settings
+      responses:
+        '200':
+          description: Settings retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update user settings
+      description: Modifies notification preferences and schedules.
+      operationId: updateSettings
+      tags:
+        - Settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSettingsRequest'
+      responses:
+        '200':
+          description: Settings updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /dashboard:
+    get:
+      summary: Get daily briefing dashboard
+      description: Consolidates active habit streaks, budgets limit status, pending todos count, and reminders alerts.
+      operationId: getDashboardBriefing
+      tags:
+        - Dashboard
+      responses:
+        '200':
+          description: Briefing summary compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /todos:
+    get:
+      summary: List todo items
+      description: Retrieve user checklist tasks. Supports status filtering and paginated pages.
+      operationId: listTodos
+      tags:
+        - Todos
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/TodoStatus'
+      responses:
+        '200':
+          description: Tasks checklist retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Create todo item
+      description: Registers a new item on the checklist.
+      operationId: createTodo
+      tags:
+        - Todos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTodoRequest'
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /todos/{id}:
+    get:
+      summary: Get todo details
+      description: Retrieve details for a single task.
+      operationId: getTodo
+      tags:
+        - Todos
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Task details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update todo details
+      description: Mutates target fields (e.g. title, priority, status) of a todo item.
+      operationId: updateTodo
+      tags:
+        - Todos
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTodoRequest'
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Delete todo item
+      description: Soft deletes a todo item from the checklist.
+      operationId: deleteTodo
+      tags:
+        - Todos
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Task deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /todos/{id}/complete:
+    post:
+      summary: Complete todo item
+      description: Transitions task state to COMPLETED.
+      operationId: completeTodo
+      tags:
+        - Todos
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Task status marked completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /todos/bulk:
+    post:
+      summary: Bulk execute actions across tasks
+      description: Performs operations (archive, delete, pause) across arrays of tasks.
+      operationId: bulkActionTodos
+      tags:
+        - Todos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchActionRequest'
+      responses:
+        '200':
+          description: Bulk updates applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchActionResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /reminders:
+    get:
+      summary: List reminders
+      description: Fetches a list of active scheduler reminders.
+      operationId: listReminders
+      tags:
+        - Reminders
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Reminders retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Create reminder alert
+      description: Registers a new alert schedule.
+      operationId: createReminder
+      tags:
+        - Reminders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReminderRequest'
+      responses:
+        '201':
+          description: Reminder created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /reminders/{id}:
+    get:
+      summary: Get reminder details
+      description: Retrieves a single reminder schedule configuration.
+      operationId: getReminder
+      tags:
+        - Reminders
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reminder details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update reminder trigger details
+      description: Modifies text, recurrence rules, or target trigger timestamps.
+      operationId: updateReminder
+      tags:
+        - Reminders
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReminderRequest'
+      responses:
+        '200':
+          description: Reminder rescheduled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Remove reminder alert
+      description: Soft deletes a reminder schedule.
+      operationId: deleteReminder
+      tags:
+        - Reminders
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Reminder removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /reminders/{id}/snooze:
+    post:
+      summary: Snooze reminder trigger
+      description: Delays scheduled trigger execution time.
+      operationId: snoozeReminder
+      tags:
+        - Reminders
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - snoozeMinutes
+              properties:
+                snoozeMinutes:
+                  type: integer
+                  minimum: 1
+                  maximum: 1440
+                  example: 15
+      responses:
+        '200':
+          description: Reminder trigger rescheduled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /reminders/{id}/dismiss:
+    post:
+      summary: Dismiss fired reminder alert
+      description: Acknowledges and silences active trigger.
+      operationId: dismissReminder
+      tags:
+        - Reminders
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reminder trigger resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /reminders/{id}/pause:
+    post:
+      summary: Pause reminder trigger
+      description: Suspends future triggers execution flags.
+      operationId: pauseReminder
+      tags:
+        - Reminders
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reminder paused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /reminders/{id}/resume:
+    post:
+      summary: Resume reminder triggers
+      description: Reactivates paused scheduler alerts.
+      operationId: resumeReminder
+      tags:
+        - Reminders
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reminder trigger resumed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /reminders/bulk:
+    post:
+      summary: Bulk modify reminders
+      description: Apply status updates across multiple alert schedules.
+      operationId: bulkActionReminders
+      tags:
+        - Reminders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchActionRequest'
+      responses:
+        '200':
+          description: Bulk reminder actions processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchActionResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /calendar/events:
+    get:
+      summary: Get calendar events
+      description: Retrieve list of scheduled events between two date thresholds.
+      operationId: getCalendarEvents
+      tags:
+        - Calendar
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Calendar events list compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarEventListResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Create calendar event
+      description: Log a new schedule block.
+      operationId: createCalendarEvent
+      tags:
+        - Calendar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCalendarEventRequest'
+      responses:
+        '201':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarEventResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /calendar/events/{id}:
+    get:
+      summary: Get calendar event details
+      description: Retrieve details for a single schedule event.
+      operationId: getCalendarEvent
+      tags:
+        - Calendar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarEventResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update calendar event
+      description: Modifies start, end, description, or trigger bounds.
+      operationId: updateCalendarEvent
+      tags:
+        - Calendar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCalendarEventRequest'
+      responses:
+        '200':
+          description: Event updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarEventResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Delete calendar event
+      description: Removes calendar event schedule block.
+      operationId: deleteCalendarEvent
+      tags:
+        - Calendar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Event deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /birthdays:
+    get:
+      summary: List birthdays
+      description: Fetch contact birthdays catalog.
+      operationId: listBirthdays
+      tags:
+        - Birthdays
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Birthdays list retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BirthdayListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Register contact birthday
+      description: Log birthday date for contact alert rules.
+      operationId: createBirthday
+      tags:
+        - Birthdays
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBirthdayRequest'
+      responses:
+        '201':
+          description: Birthday registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BirthdayResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /birthdays/{id}:
+    get:
+      summary: Get birthday details
+      description: Retrieve details for a logged contact birthday.
+      operationId: getBirthday
+      tags:
+        - Birthdays
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Birthday details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BirthdayResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update birthday details
+      description: Modify name, date, or notice offsets bounds.
+      operationId: updateBirthday
+      tags:
+        - Birthdays
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBirthdayRequest'
+      responses:
+        '200':
+          description: Birthday details updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BirthdayResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Delete birthday record
+      description: Removes birthday contact notifications registry.
+      operationId: deleteBirthday
+      tags:
+        - Birthdays
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Birthday record removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /goals:
+    get:
+      summary: List goals
+      description: Retrieve user goals and streaks summaries.
+      operationId: listGoals
+      tags:
+        - Goals
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Goals list retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoalListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Create goal
+      description: Initialize a target goal tracking parameter.
+      operationId: createGoal
+      tags:
+        - Goals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGoalRequest'
+      responses:
+        '201':
+          description: Goal registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoalResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /goals/{id}:
+    get:
+      summary: Get goal details
+      description: Retrieves status and milestone progress for a goal.
+      operationId: getGoal
+      tags:
+        - Goals
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Goal details compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoalResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update goal details
+      description: Modifies title, target dates, or tracking states.
+      operationId: updateGoal
+      tags:
+        - Goals
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGoalRequest'
+      responses:
+        '200':
+          description: Goal details updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoalResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Delete goal
+      description: Soft deletes a goal record.
+      operationId: deleteGoal
+      tags:
+        - Goals
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Goal deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /goals/{id}/milestones:
+    get:
+      summary: Get goal milestones list
+      description: Retrieve milestones listed under target goal.
+      operationId: getGoalMilestones
+      tags:
+        - Goals
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Milestones checklist compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MilestoneListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Add milestone to goal
+      description: Registers a new milestone step details.
+      operationId: createMilestone
+      tags:
+        - Goals
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMilestoneRequest'
+      responses:
+        '201':
+          description: Milestone appended successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MilestoneResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /goals/{id}/milestones/{milestoneId}:
+    patch:
+      summary: Update milestone completion
+      description: Toggles completed status flag for a milestone.
+      operationId: updateMilestone
+      tags:
+        - Goals
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: milestoneId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - isCompleted
+              properties:
+                isCompleted:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Milestone completion modified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MilestoneResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Remove milestone step
+      description: Deletes milestone step from target goal.
+      operationId: deleteMilestone
+      tags:
+        - Goals
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: milestoneId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Milestone deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /notes:
+    get:
+      summary: List personal notes
+      description: Retrieve user note snippets and titles.
+      operationId: listNotes
+      tags:
+        - Notes
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Notes list compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Create note snippet
+      description: Logs a new text note.
+      operationId: createNote
+      tags:
+        - Notes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNoteRequest'
+      responses:
+        '201':
+          description: Note snippet registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /notes/{id}:
+    get:
+      summary: Get note details
+      description: Retrieves content details and active versions index for a note.
+      operationId: getNote
+      tags:
+        - Notes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Note content retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update note snippet
+      description: Modifies text parameters and tags bindings, incrementing version numbers.
+      operationId: updateNote
+      tags:
+        - Notes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNoteRequest'
+      responses:
+        '200':
+          description: Note saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Delete note record
+      description: Soft deletes a note snippet.
+      operationId: deleteNote
+      tags:
+        - Notes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Note removed successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /notes/{id}/versions:
+    get:
+      summary: Get note versions history
+      description: List historical versions for target note snippet.
+      operationId: getNoteVersions
+      tags:
+        - Notes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Version history compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteVersionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /finance/expenses:
+    get:
+      summary: List financial expenses
+      description: Fetches logged expense entries. Supports category and date query parameters.
+      operationId: listExpenses
+      tags:
+        - Finance
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Expense ledger list compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Log expense transaction
+      description: Records an individual transaction in the financial ledger.
+      operationId: createExpense
+      tags:
+        - Finance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExpenseRequest'
+      responses:
+        '201':
+          description: Expense transaction logged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /finance/expenses/{id}:
+    get:
+      summary: Get expense details
+      description: Retrieve details for a single logged expense.
+      operationId: getExpense
+      tags:
+        - Finance
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Transaction details compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update expense transaction
+      description: Modifies category, description notes, or amount.
+      operationId: updateExpense
+      tags:
+        - Finance
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExpenseRequest'
+      responses:
+        '200':
+          description: Expense transaction saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Delete expense record
+      description: Soft deletes an expense transaction.
+      operationId: deleteExpense
+      tags:
+        - Finance
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Expense record deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /finance/expenses/analytics:
+    get:
+      summary: Get spending analytics
+      description: Fetch categories and timeframe reports metrics.
+      operationId: getExpensesAnalytics
+      tags:
+        - Finance
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Analytics summary compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /finance/expenses/categories:
+    get:
+      summary: List expense categories
+      description: Retrieve user-defined expense category codes.
+      operationId: listExpenseCategories
+      tags:
+        - Finance
+      responses:
+        '200':
+          description: Categories list retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Create expense category
+      description: Register a new category index folder.
+      operationId: createExpenseCategory
+      tags:
+        - Finance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  example: Food
+      responses:
+        '201':
+          description: Category registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /finance/budgets:
+    get:
+      summary: List budgets
+      description: Retrieve user budgets status list.
+      operationId: listBudgets
+      tags:
+        - Budgets
+      responses:
+        '200':
+          description: Budgets list compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Define budget limit
+      description: Configures alert parameters for category spend limits.
+      operationId: createBudget
+      tags:
+        - Budgets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBudgetRequest'
+      responses:
+        '201':
+          description: Budget limit defined
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /finance/budgets/{id}:
+    get:
+      summary: Get budget details
+      description: Retrieve details for a single defined budget limit.
+      operationId: getBudget
+      tags:
+        - Budgets
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Budget status details compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update budget limit
+      description: Modifies alert limits or thresholds.
+      operationId: updateBudget
+      tags:
+        - Budgets
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBudgetRequest'
+      responses:
+        '200':
+          description: Budget updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Remove budget limit
+      description: Deletes budget category alerts parameters.
+      operationId: deleteBudget
+      tags:
+        - Budgets
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Budget removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /finance/loans:
+    get:
+      summary: List loans
+      description: Retrieve logged active loans.
+      operationId: listLoans
+      tags:
+        - Loans
+      responses:
+        '200':
+          description: Loan records list compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Log active loan
+      description: Records debt parameters to auto-generate monthly expense ledgers.
+      operationId: createLoan
+      tags:
+        - Loans
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLoanRequest'
+      responses:
+        '201':
+          description: Loan logged successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /finance/loans/{id}:
+    get:
+      summary: Get loan details
+      description: Retrieves amortization parameters and principal balances details.
+      operationId: getLoan
+      tags:
+        - Loans
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Amortization details compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update loan parameters
+      description: Modify duration, rates, or status flags.
+      operationId: updateLoan
+      tags:
+        - Loans
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLoanRequest'
+      responses:
+        '200':
+          description: Loan updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Delete loan record
+      description: Soft deletes a loan record.
+      operationId: deleteLoan
+      tags:
+        - Loans
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Loan record removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /finance/loans/{id}/emi-schedule:
+    get:
+      summary: Get EMI amortization schedule
+      description: Retrieves monthly billing dates and EMI installments values.
+      operationId: getLoanEMISchedule
+      tags:
+        - EMIs
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Monthly schedule list compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EMIScheduleListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /finance/subscriptions:
+    get:
+      summary: List billing subscriptions
+      description: Retrieve user subscriptions status list.
+      operationId: listSubscriptions
+      tags:
+        - Subscriptions
+      responses:
+        '200':
+          description: Active subscriptions list compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Register subscription billing
+      description: Logs billing values to schedule automated repeat transaction alerts.
+      operationId: createSubscription
+      tags:
+        - Subscriptions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubscriptionRequest'
+      responses:
+        '201':
+          description: Subscription details logged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /finance/subscriptions/{id}:
+    get:
+      summary: Get subscription details
+      description: Retrieve details for a single logged subscription.
+      operationId: getSubscription
+      tags:
+        - Subscriptions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Subscription billing status compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update subscription details
+      description: Modify billing rates, cycles, or status flags.
+      operationId: updateSubscription
+      tags:
+        - Subscriptions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSubscriptionRequest'
+      responses:
+        '200':
+          description: Subscription updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Cancel subscription record
+      description: Soft deletes subscription scheduling entries.
+      operationId: deleteSubscription
+      tags:
+        - Subscriptions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Subscription scheduling removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /splitter/groups:
+    get:
+      summary: List joined splitter groups
+      description: Retrieve expense sharing groups roster.
+      operationId: listSplitterGroups
+      tags:
+        - Expense Splitter
+      responses:
+        '200':
+          description: Roster compiled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Create splitter group
+      description: Initialize shared split ledger folder.
+      operationId: createSplitterGroup
+      tags:
+        - Expense Splitter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupRequest'
+      responses:
+        '201':
+          description: Group ledger created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /splitter/groups/{id}:
+    get:
+      summary: Get group details
+      description: Retrieve details for a single splitter group.
+      operationId: getSplitterGroup
+      tags:
+        - Expense Splitter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Group metadata compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Disband splitter group
+      description: Soft deletes splitter group ledger.
+      operationId: deleteSplitterGroup
+      tags:
+        - Expense Splitter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Group deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /splitter/groups/{id}/members:
+    get:
+      summary: Get group members
+      description: Retrieve rosters members list.
+      operationId: getGroupMembers
+      tags:
+        - Expense Splitter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Roster compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Join splitter group
+      description: Appends user to group ledger using invite codes.
+      operationId: joinGroup
+      tags:
+        - Expense Splitter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - inviteToken
+              properties:
+                inviteToken:
+                  type: string
+                  example: secure-invite-token
+      responses:
+        '200':
+          description: User added to roster
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /splitter/groups/{id}/members/{memberId}:
+    delete:
+      summary: Leave splitter group
+      description: Removes user membership from splitter group roster.
+      operationId: leaveGroup
+      tags:
+        - Expense Splitter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Member removed successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /splitter/groups/{id}/expenses:
+    get:
+      summary: List shared group expenses
+      description: Fetch shared transactions lists.
+      operationId: listGroupExpenses
+      tags:
+        - Expense Splitter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Shared transactions list compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupExpenseListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Log shared group expense
+      description: Log expense split with group roster.
+      operationId: createGroupExpense
+      tags:
+        - Expense Splitter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddGroupExpenseRequest'
+      responses:
+        '201':
+          description: Shared transaction logged successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupExpenseResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /splitter/groups/{id}/balances:
+    get:
+      summary: Get net group balances
+      description: Retrieves calculated net balances ledger splits.
+      operationId: getGroupBalances
+      tags:
+        - Expense Splitter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Balances summary compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalancesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /splitter/groups/{id}/settlements:
+    get:
+      summary: List settlements
+      description: Fetches logged settlements histories.
+      operationId: listSettlements
+      tags:
+        - Expense Splitter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Settlements ledger list compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Propose settlement payment
+      description: Propose settlement payments to clear ledger debts.
+      operationId: createSettlement
+      tags:
+        - Expense Splitter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSettlementRequest'
+      responses:
+        '202':
+          description: Settlement proposed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /splitter/groups/{id}/settlements/{settlementId}/verify:
+    post:
+      summary: Verify settlement payment
+      description: Confirms proposed settlement payment is received, updating active balances.
+      operationId: verifySettlement
+      tags:
+        - Expense Splitter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: settlementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Settlement confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /vault/secure-notes:
+    get:
+      summary: List secure notes
+      description: Retrieve encrypted personal notes lists.
+      operationId: listSecureNotes
+      tags:
+        - Personal Vault
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Secure notes registry list compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecureNoteListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Save secure note
+      description: Logs encrypted note payload text.
+      operationId: createSecureNote
+      tags:
+        - Personal Vault
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveSecureNoteRequest'
+      responses:
+        '201':
+          description: Note encrypted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecureNoteResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /vault/secure-notes/{id}:
+    get:
+      summary: Get secure note
+      description: Retrieve ciphertext payload notes details.
+      operationId: getSecureNote
+      tags:
+        - Personal Vault
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Note payload compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecureNoteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update secure note
+      description: Modifies note title or ciphertext fields.
+      operationId: updateSecureNote
+      tags:
+        - Personal Vault
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveSecureNoteRequest'
+      responses:
+        '200':
+          description: Note updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecureNoteResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Delete secure note
+      description: Soft deletes note snippet from the vault.
+      operationId: deleteSecureNote
+      tags:
+        - Personal Vault
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Note deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /vault/passwords:
+    get:
+      summary: List credentials
+      description: Fetch encrypted passwords accounts lists.
+      operationId: listPasswords
+      tags:
+        - Personal Vault
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Credentials catalog list compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Save password credentials
+      description: Log encrypted account login metadata.
+      operationId: createPassword
+      tags:
+        - Personal Vault
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavePasswordRequest'
+      responses:
+        '201':
+          description: Credentials logged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /vault/passwords/{id}:
+    get:
+      summary: Get credentials details
+      description: Retrieves login descriptions and ciphertext passwords fields.
+      operationId: getPassword
+      tags:
+        - Personal Vault
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Credentials retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update credentials details
+      description: Mutate username, domain, or ciphertext credentials fields.
+      operationId: updatePassword
+      tags:
+        - Personal Vault
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavePasswordRequest'
+      responses:
+        '200':
+          description: Credentials saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Delete credentials record
+      description: Soft deletes passwords file.
+      operationId: deletePassword
+      tags:
+        - Personal Vault
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Credentials removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /vault/folders:
+    get:
+      summary: List folders
+      description: Retrieve vault folder structures directory lists.
+      operationId: listFolders
+      tags:
+        - Personal Vault
+      parameters:
+        - name: parentId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Directory catalog compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FolderListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Create folder
+      description: Registers folder directory path in the vault.
+      operationId: createFolder
+      tags:
+        - Personal Vault
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFolderRequest'
+      responses:
+        '201':
+          description: Folder created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FolderResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /vault/folders/{id}:
+    get:
+      summary: Get folder details
+      description: Retrieve metadata and files list for folder.
+      operationId: getFolder
+      tags:
+        - Personal Vault
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Folder metadata compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FolderResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update folder details
+      description: Rename folder parameters.
+      operationId: updateFolder
+      tags:
+        - Personal Vault
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 150
+                  example: Taxes
+      responses:
+        '200':
+          description: Folder renamed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FolderResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Delete folder
+      description: Soft deletes directory folder.
+      operationId: deleteFolder
+      tags:
+        - Personal Vault
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Folder deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /vault/files:
+    get:
+      summary: List files
+      description: Fetch files registry metadata lists.
+      operationId: listFiles
+      tags:
+        - Files
+      parameters:
+        - name: folderId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Files catalog list compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Upload file
+      description: Uploads document streams, launching asynchronous security scans.
+      operationId: uploadFile
+      tags:
+        - Files
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                folderId:
+                  type: string
+                  format: uuid
+      responses:
+        '202':
+          description: File upload stream accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileUploadResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /vault/files/{id}:
+    get:
+      summary: Get file details
+      description: Retrieves file details metadata.
+      operationId: getFile
+      tags:
+        - Files
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: File metadata compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update file metadata
+      description: Modifies favorite status or pinned status flag configs.
+      operationId: updateFileMetadata
+      tags:
+        - Files
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFileRequest'
+      responses:
+        '200':
+          description: File metadata saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Delete file
+      description: Soft deletes file metadata record.
+      operationId: deleteFile
+      tags:
+        - Files
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: File deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /vault/files/{id}/move:
+    patch:
+      summary: Move file
+      description: Restructure target file parent folders bindings.
+      operationId: moveFile
+      tags:
+        - Files
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - destinationFolderId
+              properties:
+                destinationFolderId:
+                  type: string
+                  format: uuid
+                  example: folder-uuid-1
+      responses:
+        '200':
+          description: File moved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /vault/files/{id}/versions:
+    get:
+      summary: Get file version history
+      description: Fetch array mapping history records for file changes.
+      operationId: getFileVersions
+      tags:
+        - Files
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: File version history compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileVersionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /utilities/ocr/receipts:
+    post:
+      summary: Parse receipt details
+      description: Submits receipt image to async parsing job queues.
+      operationId: parseReceipt
+      tags:
+        - OCR
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '202':
+          description: Receipt file accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatusResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      x-callbacks:
+        $ref: '#/components/callbacks/JobCompletedCallback'
+
+  /utilities/ocr/business-cards:
+    post:
+      summary: Parse business card
+      description: Submits card image to async parsing job queues.
+      operationId: parseBusinessCard
+      tags:
+        - OCR
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '202':
+          description: Business card file accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatusResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      x-callbacks:
+        $ref: '#/components/callbacks/JobCompletedCallback'
+
+  /utilities/ocr/jobs/{id}:
+    get:
+      summary: Track OCR job status
+      description: Fetch status and parsed result structures payload.
+      operationId: getOCRJobStatus
+      tags:
+        - OCR
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job status details compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OCRJobResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Cancel OCR job
+      description: Abort a pending or executing OCR task.
+      operationId: cancelOCRJob
+      tags:
+        - OCR
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobCancelRequest'
+      responses:
+        '204':
+          description: Job cancelled successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /utilities/pdf/merge:
+    post:
+      summary: Merge PDFs
+      description: Compile multiple PDF files into a single document.
+      operationId: mergePDFs
+      tags:
+        - PDF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileIds
+              properties:
+                fileIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 2
+                  example: [file-uuid-1, file-uuid-2]
+      responses:
+        '202':
+          description: PDF merge job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatusResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      x-callbacks:
+        $ref: '#/components/callbacks/JobCompletedCallback'
+
+  /utilities/pdf/split:
+    post:
+      summary: Split PDF
+      description: Separates single PDF document pages into distinct files.
+      operationId: splitPDF
+      tags:
+        - PDF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileId
+                - pageRanges
+              properties:
+                fileId:
+                  type: string
+                  format: uuid
+                pageRanges:
+                  type: string
+                  example: '1-3,5'
+      responses:
+        '202':
+          description: Split job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatusResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /utilities/pdf/compress:
+    post:
+      summary: Compress PDF
+      description: Shrink PDF file size parameters.
+      operationId: compressPDF
+      tags:
+        - PDF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileId
+              properties:
+                fileId:
+                  type: string
+                  format: uuid
+      responses:
+        '202':
+          description: Compression job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatusResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /utilities/pdf/protect:
+    post:
+      summary: Protect PDF
+      description: Lock PDF document using password protection.
+      operationId: protectPDF
+      tags:
+        - PDF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileId
+                - password
+              properties:
+                fileId:
+                  type: string
+                  format: uuid
+                password:
+                  type: string
+                  minLength: 8
+                  example: securePassword123
+      responses:
+        '202':
+          description: Password protection job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatusResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /utilities/pdf/unlock:
+    post:
+      summary: Unlock PDF
+      description: Removes password protection parameters from PDF.
+      operationId: unlockPDF
+      tags:
+        - PDF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileId
+                - password
+              properties:
+                fileId:
+                  type: string
+                  format: uuid
+                password:
+                  type: string
+                  example: securePassword123
+      responses:
+        '202':
+          description: Decryption job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatusResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /utilities/pdf/rotate:
+    post:
+      summary: Rotate PDF pages
+      description: Rotate document layout pages rotation angle.
+      operationId: rotatePDF
+      tags:
+        - PDF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileId
+                - rotationAngle
+              properties:
+                fileId:
+                  type: string
+                  format: uuid
+                rotationAngle:
+                  type: integer
+                  enum: [90, 180, 270]
+                  example: 90
+      responses:
+        '202':
+          description: Page rotation job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatusResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /utilities/pdf/jobs/{id}:
+    get:
+      summary: Track PDF job status
+      description: Fetch status and result file references payload for a PDF job.
+      operationId: getPDFJobStatus
+      tags:
+        - PDF
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job status details compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PDFJobResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Cancel PDF job
+      description: Abort a pending or executing PDF task.
+      operationId: cancelPDFJob
+      tags:
+        - PDF
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobCancelRequest'
+      responses:
+        '204':
+          description: Job cancelled successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /notifications/inbox:
+    get:
+      summary: List notifications inbox
+      description: Retrieve user-received alerts inbox lists.
+      operationId: listNotifications
+      tags:
+        - Notifications
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationStatus'
+      responses:
+        '200':
+          description: Notifications inbox compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /notifications/inbox/{id}/read:
+    patch:
+      summary: Mark notification as read
+      description: Transitions notification status flag to READ.
+      operationId: readNotification
+      tags:
+        - Notifications
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Notification marked read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /notifications/inbox/read-all:
+    post:
+      summary: Mark all notifications read
+      description: Transitions status flags for all unread inbox items to READ.
+      operationId: readAllNotifications
+      tags:
+        - Notifications
+      responses:
+        '204':
+          description: Inbox marked read successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /search/global:
+    get:
+      summary: Execute global keyword search
+      description: Search indexes text metadata properties across all modules.
+      operationId: globalSearch
+      tags:
+        - Search
+      parameters:
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Search results compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchListResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /plugins:
+    get:
+      summary: List system plugins
+      description: Retrieve registry capabilities of system modules.
+      operationId: listPlugins
+      tags:
+        - Plugins
+      responses:
+        '200':
+          description: Plugins list retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PluginListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /plugins/{id}/enable:
+    post:
+      summary: Enable system plugin
+      description: Activate target plugin command routers and schedulers.
+      operationId: enablePlugin
+      tags:
+        - Plugins
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Plugin activated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PluginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /plugins/{id}/disable:
+    post:
+      summary: Disable system plugin
+      description: Suspend execution of plugin command routers.
+      operationId: disablePlugin
+      tags:
+        - Plugins
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Plugin suspended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PluginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/audit-logs:
+    get:
+      summary: Query system audit logs
+      description: Fetch logs registry of administrative and security database records changes.
+      operationId: queryAuditLogs
+      tags:
+        - Admin
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AuditAction'
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Audit logs list compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/background-jobs:
+    get:
+      summary: List background queues
+      description: Retrieve task status and trace parameters for background jobs.
+      operationId: listBackgroundJobs
+      tags:
+        - Admin
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/JobStatus'
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Queues list compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackgroundJobListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/background-jobs/{id}:
+    get:
+      summary: Get background job details
+      description: Retrieve trace status for single queue job.
+      operationId: getBackgroundJob
+      tags:
+        - Admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job details compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackgroundJobResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Cancel background job
+      description: Abort a pending background task.
+      operationId: cancelBackgroundJob
+      tags:
+        - Admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobCancelRequest'
+      responses:
+        '204':
+          description: Job cancelled successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/system-settings:
+    get:
+      summary: Retrieve system configurations
+      description: Fetch system parameters.
+      operationId: getSystemSettings
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: System settings compiled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettingsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Update system configurations
+      description: Modifies global system flags.
+      operationId: updateSystemSettings
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSystemSettingsRequest'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettingsResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /health:
+    get:
+      summary: Platform health check
+      description: Evaluates active database connections and cache availability.
+      operationId: getHealthStatus
+      tags:
+        - Health
+      security: []
+      responses:
+        '200':
+          description: Platform healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Platform degraded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Short-lived session access token passed in Authorization headers.
+    RefreshTokenCookie:
+      type: apiKey
+      in: cookie
+      name: refresh_token
+      description: Secure HTTP-only refresh token used to request new access tokens.
+    TelegramSecretVerification:
+      type: apiKey
+      in: header
+      name: X-Telegram-Bot-Api-Secret-Token
+      description: Shared bot secret payload validating inbound Webhook calls.
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Reserved API key token for external script integrations.
+    OAuth2Placeholder:
+      type: oauth2
+      description: Reserved for future oauth integrations.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.devmate.internal/oauth/authorize
+          tokenUrl: https://auth.devmate.internal/oauth/token
+          scopes:
+            read: Grant view permissions on owned resources.
+            write: Grant modification permissions on owned resources.
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Target page index.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      description: Max record items count.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    CursorParam:
+      name: cursor
+      in: query
+      description: Encoded cursor pointer for page offsets.
+      required: false
+      schema:
+        type: string
+    SortParam:
+      name: sortBy
+      in: query
+      description: Column name path filter.
+      required: false
+      schema:
+        type: string
+    OrderParam:
+      name: sortOrder
+      in: query
+      description: Sort direction.
+      required: false
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+    SearchParam:
+      name: q
+      in: query
+      description: Keyword search term.
+      required: true
+      schema:
+        type: string
+        minLength: 1
+
+  headers:
+    CorrelationIdResponseHeader:
+      description: Ingress trace correlation tracker ID UUID.
+      schema:
+        type: string
+        format: uuid
+    RequestIdResponseHeader:
+      description: Request socket tracker ID UUID.
+      schema:
+        type: string
+        format: uuid
+    RateLimitLimit:
+      description: Request limit count allotted per window.
+      schema:
+        type: integer
+    RateLimitRemaining:
+      description: Remaining requests left in window.
+      schema:
+        type: integer
+    RateLimitReset:
+      description: Remaining seconds until rate window reset.
+      schema:
+        type: integer
+
+  responses:
+    ValidationError:
+      description: Input validation constraints violations.
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationIdResponseHeader'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorEnvelope'
+    BusinessError:
+      description: Core business rules logic violation.
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationIdResponseHeader'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Unauthorized:
+      description: Authentication failure due to missing or expired tokens.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Forbidden:
+      description: Action denied due to insufficient scope permissions.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFound:
+      description: The requested resource could not be found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Conflict:
+      description: Action conflicts with current entity state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    RateLimitError:
+      description: Too many requests processed in window.
+      headers:
+        Retry-After:
+          description: Wait seconds before retrying.
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ServerError:
+      description: Internal system error log tracker.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+  callbacks:
+    JobCompletedCallback:
+      '{$request.body#/callbackUrl}':
+        post:
+          summary: Background Job State Update Callback
+          description: Alerts caller application when async jobs (OCR, PDF, Backups) finish execution.
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  required:
+                    - jobId
+                    - status
+                    - completedAt
+                  properties:
+                    jobId:
+                      type: string
+                      format: uuid
+                    status:
+                      type: string
+                      enum: [COMPLETED, FAILED]
+                    completedAt:
+                      type: string
+                      format: date-time
+                    resultUrl:
+                      type: string
+                      format: uri
+          responses:
+            '200':
+              description: Callback acknowledged by client application.
+
+  schemas:
+    TelegramAuthRequest:
+      type: object
+      required:
+        - id
+        - first_name
+        - auth_date
+        - hash
+      properties:
+        id:
+          type: integer
+          description: Telegram user ID
+        first_name:
+          type: string
+          description: Telegram user first name
+        last_name:
+          type: string
+          description: Telegram user last name
+        username:
+          type: string
+          description: Telegram username handle
+        auth_date:
+          type: integer
+          description: Epoch timestamp of authorization
+        hash:
+          type: string
+          pattern: '^[a-fA-F0-9]{64}$'
+          description: Hex signature verifying verification data.
+
+    AuthSuccessResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required:
+            - accessToken
+            - expiresIn
+          properties:
+            accessToken:
+              type: string
+            expiresIn:
+              type: integer
+              example: 3600
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    UserResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required:
+            - id
+            - telegramId
+            - firstName
+            - status
+          properties:
+            id:
+              type: string
+              format: uuid
+            telegramId:
+              type: integer
+            username:
+              type: string
+            firstName:
+              type: string
+            lastName:
+              type: string
+            status:
+              $ref: '#/components/schemas/UserStatus'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    PreferencesResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required:
+            - baseCurrency
+            - timezone
+            - language
+          properties:
+            baseCurrency:
+              type: string
+              example: USD
+            timezone:
+              type: string
+              example: UTC
+            language:
+              type: string
+              example: en
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    SettingsResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required:
+            - quietHoursStart
+            - quietHoursEnd
+            - summaryTime
+            - notifyEnabled
+          properties:
+            quietHoursStart:
+              type: string
+              example: '22:00'
+            quietHoursEnd:
+              type: string
+              example: '07:00'
+            summaryTime:
+              type: string
+              example: '08:00'
+            notifyEnabled:
+              type: boolean
+              example: true
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+        username:
+          type: string
+
+    UpdatePreferencesRequest:
+      type: object
+      properties:
+        baseCurrency:
+          type: string
+          maxLength: 3
+          minLength: 3
+          example: USD
+        timezone:
+          type: string
+          example: Europe/Paris
+        language:
+          type: string
+          maxLength: 5
+          example: en
+
+    UpdateSettingsRequest:
+      type: object
+      properties:
+        quietHoursStart:
+          type: string
+          pattern: '^([0-9]|0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$'
+        quietHoursEnd:
+          type: string
+          pattern: '^([0-9]|0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$'
+        summaryTime:
+          type: string
+          pattern: '^([0-9]|0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$'
+        notifyEnabled:
+          type: boolean
+
+    DashboardResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required:
+            - pendingTasksCount
+            - overdueTasksCount
+            - activeBudgetAlerts
+            - dailyHabitCompletedCount
+            - dailyHabitTotalCount
+          properties:
+            pendingTasksCount:
+              type: integer
+            overdueTasksCount:
+              type: integer
+            activeBudgetAlerts:
+              type: array
+              items:
+                type: string
+            dailyHabitCompletedCount:
+              type: integer
+            dailyHabitTotalCount:
+              type: integer
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CreateTodoRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        priority:
+          $ref: '#/components/schemas/PriorityLevel'
+        dueDate:
+          type: string
+          format: date-time
+
+    UpdateTodoRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        priority:
+          $ref: '#/components/schemas/PriorityLevel'
+        status:
+          $ref: '#/components/schemas/TodoStatus'
+        dueDate:
+          type: string
+          format: date-time
+
+    TodoResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/TodoDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    TodoDetail:
+      type: object
+      required:
+        - id
+        - title
+        - priority
+        - status
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        priority:
+          $ref: '#/components/schemas/PriorityLevel'
+        status:
+          $ref: '#/components/schemas/TodoStatus'
+        dueDate:
+          type: string
+          format: date-time
+        version:
+          type: integer
+
+    TodoListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TodoDetail'
+        pagination:
+          $ref: '#/components/schemas/CursorPaginationMeta'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CreateReminderRequest:
+      type: object
+      required:
+        - text
+        - triggerTime
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+        triggerTime:
+          type: string
+          format: date-time
+        recurrence:
+          type: string
+
+    UpdateReminderRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+        triggerTime:
+          type: string
+          format: date-time
+        recurrence:
+          type: string
+
+    ReminderResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/ReminderDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    ReminderDetail:
+      type: object
+      required:
+        - id
+        - text
+        - triggerTime
+        - status
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        text:
+          type: string
+        triggerTime:
+          type: string
+          format: date-time
+        recurrence:
+          type: string
+        status:
+          $ref: '#/components/schemas/ReminderStatus'
+        version:
+          type: integer
+
+    ReminderListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReminderDetail'
+        pagination:
+          $ref: '#/components/schemas/CursorPaginationMeta'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CreateCalendarEventRequest:
+      type: object
+      required:
+        - title
+        - startTime
+        - endTime
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+
+    UpdateCalendarEventRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+
+    CalendarEventResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/CalendarEventDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CalendarEventDetail:
+      type: object
+      required:
+        - id
+        - title
+        - startTime
+        - endTime
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+
+    CalendarEventListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalendarEventDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CreateBirthdayRequest:
+      type: object
+      required:
+        - contactName
+        - birthdate
+      properties:
+        contactName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        birthdate:
+          type: string
+          format: date
+        remindDaysBefore:
+          type: integer
+          minimum: 0
+
+    UpdateBirthdayRequest:
+      type: object
+      properties:
+        contactName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        birthdate:
+          type: string
+          format: date
+        remindDaysBefore:
+          type: integer
+          minimum: 0
+
+    BirthdayResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/BirthdayDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    BirthdayDetail:
+      type: object
+      required:
+        - id
+        - contactName
+        - birthdate
+      properties:
+        id:
+          type: string
+          format: uuid
+        contactName:
+          type: string
+        birthdate:
+          type: string
+          format: date
+        remindDaysBefore:
+          type: integer
+
+    BirthdayListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BirthdayDetail'
+        pagination:
+          $ref: '#/components/schemas/CursorPaginationMeta'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CreateGoalRequest:
+      type: object
+      required:
+        - title
+        - targetDate
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        targetDate:
+          type: string
+          format: date-time
+
+    UpdateGoalRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        targetDate:
+          type: string
+          format: date-time
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        status:
+          $ref: '#/components/schemas/GoalStatus'
+
+    GoalResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/GoalDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    GoalDetail:
+      type: object
+      required:
+        - id
+        - title
+        - targetDate
+        - progress
+        - status
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        targetDate:
+          type: string
+          format: date-time
+        progress:
+          type: integer
+        status:
+          $ref: '#/components/schemas/GoalStatus'
+        version:
+          type: integer
+
+    GoalListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GoalDetail'
+        pagination:
+          $ref: '#/components/schemas/CursorPaginationMeta'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CreateMilestoneRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+
+    MilestoneResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/MilestoneDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    MilestoneDetail:
+      type: object
+      required:
+        - id
+        - goalId
+        - title
+        - isCompleted
+      properties:
+        id:
+          type: string
+          format: uuid
+        goalId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        isCompleted:
+          type: boolean
+
+    MilestoneListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MilestoneDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CreateNoteRequest:
+      type: object
+      required:
+        - title
+        - content
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        content:
+          type: string
+
+    UpdateNoteRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        content:
+          type: string
+
+    NoteResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/NoteDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    NoteDetail:
+      type: object
+      required:
+        - id
+        - title
+        - content
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        content:
+          type: string
+        version:
+          type: integer
+
+    NoteListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/NoteDetail'
+        pagination:
+          $ref: '#/components/schemas/CursorPaginationMeta'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    NoteVersionDetail:
+      type: object
+      required:
+        - version
+        - content
+        - createdAt
+      properties:
+        version:
+          type: integer
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    NoteVersionListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/NoteVersionDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CreateExpenseRequest:
+      type: object
+      required:
+        - amount
+        - description
+        - category
+      properties:
+        amount:
+          $ref: '#/components/schemas/Money'
+        description:
+          type: string
+          minLength: 1
+          maxLength: 255
+        category:
+          type: string
+          minLength: 1
+          maxLength: 100
+
+    UpdateExpenseRequest:
+      type: object
+      properties:
+        amount:
+          $ref: '#/components/schemas/Money'
+        description:
+          type: string
+          minLength: 1
+          maxLength: 255
+        category:
+          type: string
+          minLength: 1
+          maxLength: 100
+
+    ExpenseResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/ExpenseDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    ExpenseDetail:
+      type: object
+      required:
+        - id
+        - amount
+        - description
+        - category
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          $ref: '#/components/schemas/Money'
+        description:
+          type: string
+        category:
+          type: string
+        version:
+          type: integer
+
+    ExpenseListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpenseDetail'
+        pagination:
+          $ref: '#/components/schemas/CursorPaginationMeta'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    AnalyticsResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            totalSpent:
+              $ref: '#/components/schemas/Money'
+            categories:
+              type: array
+              items:
+                type: object
+                required:
+                  - name
+                  - spent
+                properties:
+                  name:
+                    type: string
+                  spent:
+                    $ref: '#/components/schemas/Money'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CategoryResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CategoryListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CreateBudgetRequest:
+      type: object
+      required:
+        - category
+        - limitAmount
+      properties:
+        category:
+          type: string
+          minLength: 1
+          maxLength: 100
+        limitAmount:
+          $ref: '#/components/schemas/Money'
+
+    UpdateBudgetRequest:
+      type: object
+      properties:
+        limitAmount:
+          $ref: '#/components/schemas/Money'
+
+    BudgetResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/BudgetDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    BudgetDetail:
+      type: object
+      required:
+        - id
+        - category
+        - limitAmount
+        - currentSpend
+      properties:
+        id:
+          type: string
+          format: uuid
+        category:
+          type: string
+        limitAmount:
+          $ref: '#/components/schemas/Money'
+        currentSpend:
+          $ref: '#/components/schemas/Money'
+
+    BudgetListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CreateLoanRequest:
+      type: object
+      required:
+        - principal
+        - durationMonths
+        - startDate
+      properties:
+        principal:
+          $ref: '#/components/schemas/Money'
+        interestRate:
+          type: string
+          pattern: '^\d+(\.\d{1,2})?$'
+        durationMonths:
+          type: integer
+          minimum: 1
+        startDate:
+          type: string
+          format: date
+
+    UpdateLoanRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/LoanStatus'
+
+    LoanResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/LoanDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    LoanDetail:
+      type: object
+      required:
+        - id
+        - principal
+        - durationMonths
+        - interestRate
+        - startDate
+        - status
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        principal:
+          $ref: '#/components/schemas/Money'
+        interestRate:
+          type: string
+        durationMonths:
+          type: integer
+        startDate:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/LoanStatus'
+        version:
+          type: integer
+
+    LoanListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoanDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    EMIScheduleDetail:
+      type: object
+      required:
+        - paymentDate
+        - amount
+        - status
+      properties:
+        paymentDate:
+          type: string
+          format: date
+        amount:
+          $ref: '#/components/schemas/Money'
+        status:
+          $ref: '#/components/schemas/EMIStatus'
+
+    EMIScheduleListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EMIScheduleDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CreateSubscriptionRequest:
+      type: object
+      required:
+        - name
+        - amount
+        - cycle
+        - nextBilling
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        amount:
+          $ref: '#/components/schemas/Money'
+        cycle:
+          type: string
+          example: Monthly
+        nextBilling:
+          type: string
+          format: date-time
+
+    UpdateSubscriptionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Money'
+        cycle:
+          type: string
+        nextBilling:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [Active, Suspended]
+
+    SubscriptionResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/SubscriptionDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    SubscriptionDetail:
+      type: object
+      required:
+        - id
+        - name
+        - amount
+        - cycle
+        - nextBilling
+        - status
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Money'
+        cycle:
+          type: string
+        nextBilling:
+          type: string
+          format: date-time
+        status:
+          type: string
+        version:
+          type: integer
+
+    SubscriptionListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CreateGroupRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+
+    GroupResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/GroupDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    GroupDetail:
+      type: object
+      required:
+        - id
+        - name
+        - inviteToken
+        - status
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        inviteToken:
+          type: string
+        status:
+          type: string
+        version:
+          type: integer
+
+    GroupListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    MemberResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/MemberDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    MemberDetail:
+      type: object
+      required:
+        - id
+        - groupId
+        - userId
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        groupId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        nickname:
+          type: string
+        status:
+          type: string
+
+    MemberListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemberDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    AddGroupExpenseRequest:
+      type: object
+      required:
+        - amount
+        - description
+        - splitType
+        - payerId
+        - participants
+      properties:
+        amount:
+          $ref: '#/components/schemas/Money'
+        description:
+          type: string
+        splitType:
+          $ref: '#/components/schemas/SplitType'
+        payerId:
+          type: string
+          format: uuid
+        participants:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    GroupExpenseResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/GroupExpenseDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    GroupExpenseDetail:
+      type: object
+      required:
+        - id
+        - groupId
+        - payerId
+        - amount
+        - description
+        - splitType
+      properties:
+        id:
+          type: string
+          format: uuid
+        groupId:
+          type: string
+          format: uuid
+        payerId:
+          type: string
+          format: uuid
+        amount:
+          $ref: '#/components/schemas/Money'
+        description:
+          type: string
+        splitType:
+          $ref: '#/components/schemas/SplitType'
+
+    GroupExpenseListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupExpenseDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    BalancesResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            type: object
+            required:
+              - memberId
+              - netBalance
+            properties:
+              memberId:
+                type: string
+                format: uuid
+              nickname:
+                type: string
+              netBalance:
+                $ref: '#/components/schemas/Money'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CreateSettlementRequest:
+      type: object
+      required:
+        - recipientId
+        - amount
+      properties:
+        recipientId:
+          type: string
+          format: uuid
+        amount:
+          $ref: '#/components/schemas/Money'
+
+    SettlementResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/SettlementDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    SettlementDetail:
+      type: object
+      required:
+        - id
+        - groupId
+        - debtorId
+        - creditorId
+        - amount
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        groupId:
+          type: string
+          format: uuid
+        debtorId:
+          type: string
+          format: uuid
+        creditorId:
+          type: string
+          format: uuid
+        amount:
+          $ref: '#/components/schemas/Money'
+        status:
+          type: string
+          enum: [Proposed, Completed]
+
+    SettlementListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    SaveSecureNoteRequest:
+      type: object
+      required:
+        - title
+        - ciphertext
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        ciphertext:
+          type: string
+
+    SecureNoteResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/SecureNoteDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    SecureNoteDetail:
+      type: object
+      required:
+        - id
+        - title
+        - ciphertext
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        ciphertext:
+          type: string
+        version:
+          type: integer
+
+    SecureNoteListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SecureNoteDetail'
+        pagination:
+          $ref: '#/components/schemas/CursorPaginationMeta'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    SavePasswordRequest:
+      type: object
+      required:
+        - title
+        - username
+        - ciphertext
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        domain:
+          type: string
+        username:
+          type: string
+        ciphertext:
+          type: string
+
+    PasswordResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/PasswordDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    PasswordDetail:
+      type: object
+      required:
+        - id
+        - title
+        - username
+        - ciphertext
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        domain:
+          type: string
+        username:
+          type: string
+        ciphertext:
+          type: string
+        version:
+          type: integer
+
+    PasswordListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PasswordDetail'
+        pagination:
+          $ref: '#/components/schemas/CursorPaginationMeta'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CreateFolderRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        parentId:
+          type: string
+          format: uuid
+
+    FolderResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/FolderDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    FolderDetail:
+      type: object
+      required:
+        - id
+        - name
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        parentId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        version:
+          type: integer
+
+    FolderListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FolderDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    FileUploadResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required:
+            - fileId
+            - status
+          properties:
+            fileId:
+              type: string
+              format: uuid
+            status:
+              $ref: '#/components/schemas/FileStatus'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    FileResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/FileDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    FileDetail:
+      type: object
+      required:
+        - id
+        - name
+        - storagePath
+        - fileSize
+        - extension
+        - isFavorite
+        - isPinned
+        - status
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        folderId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        storagePath:
+          type: string
+        fileSize:
+          type: integer
+        extension:
+          type: string
+        isFavorite:
+          type: boolean
+        isPinned:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/FileStatus'
+        version:
+          type: integer
+
+    UpdateFileRequest:
+      type: object
+      properties:
+        isFavorite:
+          type: boolean
+        isPinned:
+          type: boolean
+
+    FileListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileDetail'
+        pagination:
+          $ref: '#/components/schemas/CursorPaginationMeta'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    FileVersionDetail:
+      type: object
+      required:
+        - version
+        - storagePath
+        - fileSize
+        - createdAt
+      properties:
+        version:
+          type: integer
+        storagePath:
+          type: string
+        fileSize:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    FileVersionListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileVersionDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    JobStatusResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required:
+            - jobId
+            - status
+          properties:
+            jobId:
+              type: string
+              format: uuid
+            status:
+              $ref: '#/components/schemas/JobStatus'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    OCRJobResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required:
+            - jobId
+            - status
+          properties:
+            jobId:
+              type: string
+              format: uuid
+            status:
+              $ref: '#/components/schemas/JobStatus'
+            result:
+              type: object
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    PDFJobResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required:
+            - jobId
+            - status
+          properties:
+            jobId:
+              type: string
+              format: uuid
+            status:
+              $ref: '#/components/schemas/JobStatus'
+            resultFileId:
+              type: string
+              format: uuid
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    JobCancelRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 200
+
+    NotificationResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/NotificationDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    NotificationDetail:
+      type: object
+      required:
+        - id
+        - title
+        - body
+        - status
+        - triggerTime
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        body:
+          type: string
+        status:
+          $ref: '#/components/schemas/NotificationStatus'
+        triggerTime:
+          type: string
+          format: date-time
+
+    NotificationListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationDetail'
+        pagination:
+          $ref: '#/components/schemas/CursorPaginationMeta'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    SearchListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+        pagination:
+          $ref: '#/components/schemas/CursorPaginationMeta'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    SearchResult:
+      type: object
+      required:
+        - id
+        - module
+        - title
+        - snippet
+      properties:
+        id:
+          type: string
+          format: uuid
+        module:
+          type: string
+        title:
+          type: string
+        snippet:
+          type: string
+
+    PluginResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/PluginDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    PluginDetail:
+      type: object
+      required:
+        - id
+        - pluginId
+        - version
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        pluginId:
+          type: string
+        version:
+          type: string
+        status:
+          type: string
+          enum: [Active, Inactive]
+
+    PluginListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PluginDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    AuditLogDetail:
+      type: object
+      required:
+        - id
+        - tableName
+        - recordId
+        - action
+        - correlationId
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        tableName:
+          type: string
+        recordId:
+          type: string
+        action:
+          $ref: '#/components/schemas/AuditAction'
+        oldValue:
+          type: string
+        newValue:
+          type: string
+        correlationId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    AuditLogListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogDetail'
+        pagination:
+          $ref: '#/components/schemas/CursorPaginationMeta'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    BackgroundJobDetail:
+      type: object
+      required:
+        - id
+        - jobType
+        - status
+        - retryCount
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        jobType:
+          type: string
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        retryCount:
+          type: integer
+        errorLog:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    BackgroundJobListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BackgroundJobDetail'
+        pagination:
+          $ref: '#/components/schemas/CursorPaginationMeta'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    BackgroundJobResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/BackgroundJobDetail'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    SystemSettingsResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required:
+            - maintenanceMode
+            - allowedRegistration
+          properties:
+            maintenanceMode:
+              type: boolean
+              example: false
+            allowedRegistration:
+              type: boolean
+              example: true
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    UpdateSystemSettingsRequest:
+      type: object
+      properties:
+        maintenanceMode:
+          type: boolean
+        allowedRegistration:
+          type: boolean
+
+    HealthResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - status
+            - timestamp
+          properties:
+            status:
+              type: string
+              example: Healthy
+            timestamp:
+              type: string
+              format: date-time
+
+    BatchActionRequest:
+      type: object
+      required:
+        - ids
+        - action
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        action:
+          type: string
+          example: delete
+
+    BatchActionResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required:
+            - updatedIds
+          properties:
+            updatedIds:
+              type: array
+              items:
+                type: string
+                format: uuid
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    Money:
+      type: object
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: string
+          pattern: '^\d+(\.\d{1,4})?$'
+          example: '15.50'
+        currency:
+          type: string
+          maxLength: 3
+          minLength: 3
+          example: USD
+
+    ResponseMeta:
+      type: object
+      required:
+        - correlationId
+        - traceId
+      properties:
+        correlationId:
+          type: string
+          format: uuid
+        traceId:
+          type: string
+          format: uuid
+
+    CursorPaginationMeta:
+      type: object
+      required:
+        - hasMore
+      properties:
+        nextCursor:
+          type: string
+        hasMore:
+          type: boolean
+
+    ErrorEnvelope:
+      type: object
+      required:
+        - success
+        - error
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: object
+          required:
+            - code
+            - message
+            - timestamp
+          properties:
+            code:
+              type: string
+              example: RESOURCE_NOT_FOUND
+            message:
+              type: string
+              example: Request resource not found.
+            timestamp:
+              type: string
+              format: date-time
+            details:
+              type: array
+              items:
+                type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    ValidationErrorEnvelope:
+      type: object
+      required:
+        - success
+        - error
+        - meta
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: object
+          required:
+            - code
+            - message
+            - timestamp
+            - details
+          properties:
+            code:
+              type: string
+              const: VALIDATION_FAILED
+            message:
+              type: string
+              example: Invalid input parameters.
+            timestamp:
+              type: string
+              format: date-time
+            details:
+              type: array
+              items:
+                type: object
+                required:
+                  - field
+                  - issue
+                properties:
+                  field:
+                    type: string
+                    example: amount
+                  issue:
+                    type: string
+                    example: Value must be a positive string.
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    UserStatus:
+      type: string
+      enum: [PENDING_ONBOARDING, ACTIVE, SUSPENDED, DEACTIVATED]
+
+    PriorityLevel:
+      type: string
+      enum: [LOW, MEDIUM, HIGH]
+
+    TodoStatus:
+      type: string
+      enum: [PENDING, IN_PROGRESS, COMPLETED, OVERDUE]
+
+    ReminderStatus:
+      type: string
+      enum: [PENDING, FIRED, MISSED, SNOOZED, PAUSED, COMPLETED]
+
+    GoalStatus:
+      type: string
+      enum: [DRAFT, ACTIVE, ACHIEVED, ABANDONED]
+
+    LoanStatus:
+      type: string
+      enum: [ACTIVE, SETTLED, DEFAULTED]
+
+    EMIStatus:
+      type: string
+      enum: [PENDING, PAID, OVERDUE]
+
+    SplitType:
+      type: string
+      enum: [EQUAL, PERCENTAGE, CUSTOM]
+
+    FileStatus:
+      type: string
+      enum: [SCANNING, READY, INFECTED, DELETED]
+
+    JobStatus:
+      type: string
+      enum: [PENDING, RUNNING, COMPLETED, FAILED]
+
+    NotificationStatus:
+      type: string
+      enum: [UNREAD, READ, ARCHIVED]
+
+    AuditAction:
+      type: string
+      enum: [INSERT, UPDATE, DELETE, SECURITY_FLAG, IMPORT, EXPORT]
